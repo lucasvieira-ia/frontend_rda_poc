@@ -28,17 +28,14 @@ interface ReviewItem {
   templateUrl: './app.html',
 })
 export class App {
-  protected readonly queueFilters = [
-    { key: 'review', label: 'To review', count: 2 },
-    { key: 'feedback', label: 'Feedbacks to approve', count: 1 },
-    { key: 'confirmation', label: 'Type confirmation', count: 1 },
-    { key: 'peer', label: 'Peer review', count: 1 },
-  ] as const;
-
   protected readonly selectedQueue = signal<QueueCategory>('review');
   protected readonly searchTerm = signal('');
   protected readonly calibrationMode = signal(false);
   protected readonly startedReviewId = signal<string | null>(null);
+  protected readonly selectedFiles = signal<Record<number, File | null>>({
+    1: null,
+    2: null,
+  });
 
   private readonly reviewItems: ReviewItem[] = [
     {
@@ -128,6 +125,44 @@ export class App {
     },
   ];
 
+  protected readonly queueCounts = computed(() => {
+    const counts: Record<QueueCategory, number> = {
+      review: 0,
+      feedback: 0,
+      confirmation: 0,
+      peer: 0,
+    };
+
+    for (const item of this.reviewItems) {
+      counts[item.category] += 1;
+    }
+
+    return counts;
+  });
+
+  protected readonly queueFilters = computed(() => {
+    const counts = this.queueCounts();
+
+    return [
+      { key: 'review', label: 'To review', count: counts.review },
+      { key: 'feedback', label: 'Feedbacks to approve', count: counts.feedback },
+      { key: 'confirmation', label: 'Type confirmation', count: counts.confirmation },
+      { key: 'peer', label: 'Peer review', count: counts.peer },
+    ] as const;
+  });
+
+  protected readonly queueSummary = computed(() => {
+    const counts = this.queueCounts();
+    const summary = [
+      `${counts.review} ${counts.review === 1 ? 'review' : 'reviews'}`,
+      `${counts.feedback} ${counts.feedback === 1 ? 'feedback to approve' : 'feedbacks to approve'}`,
+      `${counts.confirmation} ${counts.confirmation === 1 ? 'type confirmation' : 'type confirmations'}`,
+      `${counts.peer} ${counts.peer === 1 ? 'peer review' : 'peer reviews'}`,
+    ];
+
+    return summary.join(' • ');
+  });
+
   protected readonly visibleItems = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
 
@@ -156,11 +191,63 @@ export class App {
     }
   }
 
+  protected onFileSelected(event: Event, fileSlot: number): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    this.selectedFiles.update((files) => ({ ...files, [fileSlot]: file }));
+  }
+
+  protected finalizeUpload(): void {
+    const files = this.selectedFiles();
+
+    if (!files[1] || !files[2]) {
+      return;
+    }
+
+    this.reviewItems.unshift(
+      this.createUploadedReview(files[2], 2),
+      this.createUploadedReview(files[1], 1),
+    );
+    this.selectedFiles.set({ 1: null, 2: null });
+    this.selectedQueue.set('review');
+  }
+
   protected toggleCalibrationMode(): void {
     this.calibrationMode.update((enabled) => !enabled);
   }
 
   protected startReview(itemId: string): void {
     this.startedReviewId.set(itemId);
+  }
+
+  private createUploadedReview(file: File, fileSlot: number): ReviewItem {
+    const baseName = file.name.includes('.') ? file.name.split('.').slice(0, -1).join('.') : file.name;
+    const initials = (baseName || `Upload ${fileSlot}`)
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(0, 2)
+      .toUpperCase() || `U${fileSlot}`;
+
+    return {
+      id: `UP-${Date.now()}-${fileSlot}`,
+      organization: `Uploaded document ${fileSlot}`,
+      organizationInitials: initials,
+      project: `Submission ${fileSlot}`,
+      file: `Document · ${file.name}`,
+      amount: 'Pending review',
+      version: 'v1',
+      age: 'Just now',
+      overdue: false,
+      category: 'review',
+      metrics: [
+        { label: 'Financial', value: 0, limit: 95 },
+        { label: 'EPA', value: 0, limit: 100 },
+        { label: 'Operational', value: 0, limit: 95 },
+      ],
+    };
   }
 }

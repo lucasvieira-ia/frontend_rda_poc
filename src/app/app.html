@@ -57,10 +57,7 @@
         My Queue <span class="nav-badge">5</span>
       </button>
       <button class="primary-tab" type="button" role="tab" aria-selected="false">
-        Pipeline Dashboard
-      </button>
-      <button class="primary-tab" type="button" role="tab" aria-selected="false">
-        Submissions
+        Skills
       </button>
     </nav>
   </header>
@@ -70,22 +67,66 @@
       <div>
         <div class="eyebrow"><span class="eyebrow-dot"></span> REVIEW WORKSPACE</div>
         <h1>My Queue</h1>
-        <p class="summary">
-          2 reviews <span>•</span> 1 feedback to approve <span>•</span> 1 type confirmation
-          <span>•</span> 1 peer review
-        </p>
+        <p class="summary">{{ queueSummary() }}</p>
       </div>
-      <button class="queue-options" type="button" aria-label="Queue options">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="5" cy="12" r="1"></circle>
-          <circle cx="12" cy="12" r="1"></circle>
-          <circle cx="19" cy="12" r="1"></circle>
-        </svg>
-      </button>
     </div>
 
+    <section class="upload-section" aria-label="Upload documents">
+      <div class="upload-header">
+        <h2>Upload documents</h2>
+        <span>Two files can be uploaded at a time.</span>
+      </div>
+
+      <div class="upload-grid">
+        <label class="upload-field">
+          <span class="upload-field-label">File 1</span>
+          <span class="file-picker">
+            <input
+              class="file-picker-input"
+              type="file"
+              accept=".pdf,.doc,.docx,.xlsx,.pptx,.txt"
+              aria-label="Choose the first document"
+              (change)="onFileSelected($event, 1)"
+            />
+            <span class="file-picker-button">Choose file</span>
+            <span class="file-picker-name">
+              {{ selectedFiles()[1]?.name || 'No file chosen' }}
+            </span>
+          </span>
+        </label>
+
+        <label class="upload-field">
+          <span class="upload-field-label">File 2</span>
+          <span class="file-picker">
+            <input
+              class="file-picker-input"
+              type="file"
+              accept=".pdf,.doc,.docx,.xlsx,.pptx,.txt"
+              aria-label="Choose the second document"
+              (change)="onFileSelected($event, 2)"
+            />
+            <span class="file-picker-button">Choose file</span>
+            <span class="file-picker-name">
+              {{ selectedFiles()[2]?.name || 'No file chosen' }}
+            </span>
+          </span>
+        </label>
+      </div>
+      <div class="upload-actions">
+        <span>Select both files before finalizing the upload.</span>
+        <button
+          class="finalize-upload"
+          type="button"
+          [disabled]="!selectedFiles()[1] || !selectedFiles()[2]"
+          (click)="finalizeUpload()"
+        >
+          Finalize upload
+        </button>
+      </div>
+    </section>
+
     <nav class="queue-tabs" aria-label="Filter queue" role="tablist">
-      @for (filter of queueFilters; track filter.key) {
+      @for (filter of queueFilters(); track filter.key) {
         <button
           class="queue-tab"
           type="button"
