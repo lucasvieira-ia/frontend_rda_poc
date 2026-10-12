@@ -1,0 +1,203 @@
+<div class="app-shell">
+  <header class="app-header">
+    <div class="header-main">
+      <a class="brand" href="#my-queue" aria-label="RDA home">
+        <span class="brand-mark">R</span>
+        <span class="brand-name">rda<span>review</span></span>
+      </a>
+
+      <label class="search-box">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="10.8" cy="10.8" r="6.8"></circle>
+          <path d="m16 16 4.2 4.2"></path>
+        </svg>
+        <input
+          type="search"
+          placeholder="Search partner, project, or ID"
+          aria-label="Search partner, project, or ID"
+          (input)="onSearch($event)"
+        />
+        <kbd>⌘ K</kbd>
+      </label>
+
+      <div class="user-controls">
+        <button
+          class="calibration-button"
+          type="button"
+          [class.is-active]="calibrationMode()"
+          [attr.aria-pressed]="calibrationMode()"
+          (click)="toggleCalibrationMode()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h10M18 7h2M4 17h2m4 0h10M14 4v6M8 14v6"></path>
+          </svg>
+          Calibration Mode
+        </button>
+
+        <label class="view-as">
+          <span>View as:</span>
+          <select aria-label="View as">
+            <option>Reviewer</option>
+            <option>Partner</option>
+            <option>Administrator</option>
+          </select>
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="m4 6 4 4 4-4"></path>
+          </svg>
+        </label>
+
+        <button class="avatar" type="button" aria-label="Account menu for Camila Martins">
+          CM
+        </button>
+      </div>
+    </div>
+
+    <nav class="primary-nav" aria-label="Primary navigation" role="tablist">
+      <button class="primary-tab active" type="button" role="tab" aria-selected="true">
+        My Queue <span class="nav-badge">5</span>
+      </button>
+      <button class="primary-tab" type="button" role="tab" aria-selected="false">
+        Pipeline Dashboard
+      </button>
+      <button class="primary-tab" type="button" role="tab" aria-selected="false">
+        Submissions
+      </button>
+    </nav>
+  </header>
+
+  <main id="my-queue" class="page-content">
+    <div class="page-heading">
+      <div>
+        <div class="eyebrow"><span class="eyebrow-dot"></span> REVIEW WORKSPACE</div>
+        <h1>My Queue</h1>
+        <p class="summary">
+          2 reviews <span>•</span> 1 feedback to approve <span>•</span> 1 type confirmation
+          <span>•</span> 1 peer review
+        </p>
+      </div>
+      <button class="queue-options" type="button" aria-label="Queue options">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="5" cy="12" r="1"></circle>
+          <circle cx="12" cy="12" r="1"></circle>
+          <circle cx="19" cy="12" r="1"></circle>
+        </svg>
+      </button>
+    </div>
+
+    <nav class="queue-tabs" aria-label="Filter queue" role="tablist">
+      @for (filter of queueFilters; track filter.key) {
+        <button
+          class="queue-tab"
+          type="button"
+          role="tab"
+          [class.active]="selectedQueue() === filter.key"
+          [attr.aria-selected]="selectedQueue() === filter.key"
+          (click)="selectQueue(filter.key)"
+        >
+          {{ filter.label }}
+          <span class="count-badge">{{ filter.count }}</span>
+        </button>
+      }
+    </nav>
+
+    <section class="queue-list" aria-label="Reviews to complete">
+      @for (item of visibleItems(); track item.id) {
+        <article class="review-card">
+          <div class="project-column">
+            <div class="organization-line">
+              <span class="organization-avatar">{{ item.organizationInitials }}</span>
+              <div>
+                <h2>{{ item.organization }}</h2>
+                <p class="project-description">{{ item.project }}</p>
+              </div>
+            </div>
+
+            <div class="attachment">
+              <span class="file-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M6 3.75h8l4 4v12.5H6z"></path>
+                  <path d="M14 3.75v4h4M9 13h6M9 16h6"></path>
+                </svg>
+              </span>
+              <span class="file-name">{{ item.file }}</span>
+              <span class="version-tag">{{ item.version }}</span>
+            </div>
+            <div class="amount">{{ item.amount }}</div>
+          </div>
+
+          <div class="metrics-column">
+            <div class="project-id">
+              <span>PROJECT ID</span>
+              <strong>{{ item.id }}</strong>
+            </div>
+
+            <div class="metrics-list">
+              @for (metric of item.metrics; track metric.label) {
+                <div class="metric-row">
+                  <div class="metric-heading">
+                    <span>{{ metric.label }}</span>
+                    <strong>{{ metric.value }}%</strong>
+                  </div>
+                  <div class="metric-visual">
+                    <div
+                      class="metric-track"
+                      role="progressbar"
+                      [attr.aria-label]="metric.label"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      [attr.aria-valuenow]="metric.value"
+                    >
+                      <span class="metric-fill" [style.width.%]="metric.value"></span>
+                      <span class="benchmark-line" [style.left.%]="metric.limit"></span>
+                    </div>
+                    <span class="metric-limit">Limit {{ metric.limit }}%</span>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="action-column">
+            <div class="deadline">
+              <span class="clock-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20">
+                  <circle cx="10" cy="10" r="7"></circle>
+                  <path d="M10 6v4l2.5 1.5"></path>
+                </svg>
+              </span>
+              <span>{{ item.age }}</span>
+            </div>
+            @if (item.overdue) {
+              <span class="overdue-badge">
+                <span></span>
+                Deadline exceeded
+              </span>
+            }
+            <button class="start-review" type="button" (click)="startReview(item.id)">
+              {{ startedReviewId() === item.id ? 'Continue review' : 'Start Review' }}
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M4 10h11M10 5l5 5-5 5"></path>
+              </svg>
+            </button>
+          </div>
+        </article>
+      } @empty {
+        <div class="empty-state">
+          <span class="empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <circle cx="10.8" cy="10.8" r="6.8"></circle>
+              <path d="m16 16 4.2 4.2"></path>
+            </svg>
+          </span>
+          <h2>No matching reviews</h2>
+          <p>Try another queue or search for a different partner, project, or ID.</p>
+        </div>
+      }
+    </section>
+
+    <footer class="page-footer">
+      <span class="footer-status"><span></span> All changes saved</span>
+      <span>RDA Review <span class="footer-separator">/</span> Reviewer workspace</span>
+    </footer>
+  </main>
+</div>
