@@ -46,7 +46,7 @@ button {
   height: 82px;
   display: flex;
   align-items: center;
-  gap: 50px;
+  gap: 28px;
 }
 
 .brand {
@@ -86,7 +86,8 @@ button {
   display: flex;
   align-items: center;
   gap: 11px;
-  width: min(450px, 38vw);
+  width: min(600px, 52vw);
+  flex: 0 1 600px;
   height: 42px;
   padding: 0 12px;
   border: 1px solid #e6eaf0;
@@ -102,8 +103,6 @@ button {
 }
 
 .search-box svg,
-.calibration-button svg,
-.view-as svg,
 .file-icon svg,
 .clock-icon svg,
 .start-review svg,
@@ -147,61 +146,7 @@ button {
   align-items: center;
   gap: 22px;
   margin-left: auto;
-}
-
-.calibration-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 11px;
-  border: 1px solid #e4e9f0;
-  border-radius: 8px;
-  background: #fff;
-  color: #57667b;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.calibration-button svg {
-  width: 16px;
-  height: 16px;
-}
-
-.calibration-button:hover,
-.calibration-button.is-active {
-  border-color: #a9c5fb;
-  background: #f2f7ff;
-  color: var(--blue-dark);
-}
-
-.view-as {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: #7d8999;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.view-as select {
-  appearance: none;
-  max-width: 110px;
-  padding: 5px 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: #34445b;
-  font-size: 13px;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.view-as svg {
-  width: 13px;
-  height: 13px;
-  margin-left: -7px;
-  pointer-events: none;
+  flex: 0 0 auto;
 }
 
 .avatar {
@@ -277,6 +222,20 @@ button {
 
 .page-content {
   padding-top: 43px;
+}
+
+.skills-page {
+  min-height: 280px;
+  display: grid;
+  place-items: center;
+}
+
+.skills-page h1 {
+  color: #172840;
+  font-size: 30px;
+  font-weight: 720;
+  letter-spacing: -1.2px;
+  line-height: 1.2;
 }
 
 .page-heading {
@@ -919,6 +878,10 @@ h1 {
     gap: 24px;
   }
 
+  .search-box {
+    width: min(600px, 52vw);
+  }
+
   .user-controls {
     gap: 12px;
   }
@@ -960,23 +923,6 @@ h1 {
 
   .user-controls {
     gap: 12px;
-  }
-
-  .calibration-button {
-    width: 36px;
-    height: 36px;
-    justify-content: center;
-    padding: 0;
-    font-size: 0;
-  }
-
-  .calibration-button svg {
-    width: 17px;
-    height: 17px;
-  }
-
-  .view-as {
-    display: none;
   }
 
   .primary-nav {

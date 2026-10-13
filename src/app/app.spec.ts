@@ -29,6 +29,25 @@ describe('App', () => {
       .toContain('No matching reviews');
   });
 
+  it('should show the No Skills page and return to the queue', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const tabs = compiled.querySelectorAll<HTMLButtonElement>('.primary-tab');
+
+    tabs[1].click();
+    fixture.detectChanges();
+    expect(compiled.querySelector('#skills-page-title')?.textContent).toContain('No Skills');
+    expect(compiled.querySelector('.upload-section')).toBeNull();
+    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+
+    tabs[0].click();
+    fixture.detectChanges();
+    expect(compiled.querySelector('.upload-section')).not.toBeNull();
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+  });
+
   it('should filter the queue by review type', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();

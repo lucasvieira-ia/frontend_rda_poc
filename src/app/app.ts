@@ -1,7 +1,8 @@
 import { Component, computed, OnDestroy, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 
-type QueueCategory = 'review' | 'feedback' | 'confirmation' | 'peer';
+type QueueCategory = 'review' | 'feedback';
+type PrimaryPage = 'queue' | 'skills';
 
 interface ReviewMetric {
   label: string;
@@ -50,9 +51,9 @@ interface ReviewItem {
 export class App implements OnDestroy {
   private readonly apiUrl = 'http://localhost:8000/api/reviews/ingest';
 
+  protected readonly activePage = signal<PrimaryPage>('queue');
   protected readonly selectedQueue = signal<QueueCategory>('review');
   protected readonly searchTerm = signal('');
-  protected readonly calibrationMode = signal(false);
   protected readonly startedReviewId = signal<string | null>(null);
   protected readonly uploadingReviewId = signal<string | null>(null);
   protected readonly uploadErrors = signal<Record<string, string>>({});
@@ -70,8 +71,6 @@ export class App implements OnDestroy {
     const counts: Record<QueueCategory, number> = {
       review: 0,
       feedback: 0,
-      confirmation: 0,
-      peer: 0,
     };
 
     for (const item of this.reviewItems()) {
@@ -91,8 +90,6 @@ export class App implements OnDestroy {
     return [
       { key: 'review', label: 'To review', count: counts.review },
       { key: 'feedback', label: 'Feedbacks to approve', count: counts.feedback },
-      { key: 'confirmation', label: 'Type confirmation', count: counts.confirmation },
-      { key: 'peer', label: 'Peer review', count: counts.peer },
     ] as const;
   });
 
@@ -101,8 +98,6 @@ export class App implements OnDestroy {
     const summary = [
       `${counts.review} ${counts.review === 1 ? 'review' : 'reviews'}`,
       `${counts.feedback} ${counts.feedback === 1 ? 'feedback to approve' : 'feedbacks to approve'}`,
-      `${counts.confirmation} ${counts.confirmation === 1 ? 'type confirmation' : 'type confirmations'}`,
-      `${counts.peer} ${counts.peer === 1 ? 'peer review' : 'peer reviews'}`,
     ];
 
     return summary.join(' • ');
@@ -129,6 +124,10 @@ export class App implements OnDestroy {
 
   protected selectQueue(queue: QueueCategory): void {
     this.selectedQueue.set(queue);
+  }
+
+  protected selectPage(page: PrimaryPage): void {
+    this.activePage.set(page);
   }
 
   protected onSearch(event: Event): void {
@@ -172,10 +171,6 @@ export class App implements OnDestroy {
     }
   }
 
-  protected toggleCalibrationMode(): void {
-    this.calibrationMode.update((enabled) => !enabled);
-  }
-
   protected startReview(itemId: string): void {
     const item = this.reviewItems().find((review) => review.id === itemId);
     const attachments = item?.attachments;
@@ -209,8 +204,8 @@ export class App implements OnDestroy {
   private createUploadedReview(files: File[]): ReviewItem {
     return {
       id: `UP-${Date.now()}`,
-      organization: 'New submission',
-      organizationInitials: 'NS',
+      organization: 'New RDA Submitted',
+      organizationInitials: 'NR',
       project: 'Uploaded files',
       file: `${files.length} uploaded documents`,
       amount: 'Pending review',

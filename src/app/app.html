@@ -21,31 +21,6 @@
       </label>
 
       <div class="user-controls">
-        <button
-          class="calibration-button"
-          type="button"
-          [class.is-active]="calibrationMode()"
-          [attr.aria-pressed]="calibrationMode()"
-          (click)="toggleCalibrationMode()"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 7h10M18 7h2M4 17h2m4 0h10M14 4v6M8 14v6"></path>
-          </svg>
-          Calibration Mode
-        </button>
-
-        <label class="view-as">
-          <span>View as:</span>
-          <select aria-label="View as">
-            <option>Reviewer</option>
-            <option>Partner</option>
-            <option>Administrator</option>
-          </select>
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <path d="m4 6 4 4 4-4"></path>
-          </svg>
-        </label>
-
         <button class="avatar" type="button" aria-label="Account menu for Camila Martins">
           CM
         </button>
@@ -53,19 +28,34 @@
     </div>
 
     <nav class="primary-nav" aria-label="Primary navigation" role="tablist">
-      <button class="primary-tab active" type="button" role="tab" aria-selected="true">
+      <button
+        class="primary-tab"
+        type="button"
+        role="tab"
+        [class.active]="activePage() === 'queue'"
+        [attr.aria-selected]="activePage() === 'queue'"
+        (click)="selectPage('queue')"
+      >
         My Queue <span class="nav-badge">{{ totalQueueCount() }}</span>
       </button>
-      <button class="primary-tab" type="button" role="tab" aria-selected="false">
+      <button
+        class="primary-tab"
+        type="button"
+        role="tab"
+        [class.active]="activePage() === 'skills'"
+        [attr.aria-selected]="activePage() === 'skills'"
+        (click)="selectPage('skills')"
+      >
         Skills
       </button>
     </nav>
   </header>
 
   <main id="my-queue" class="page-content">
+    @if (activePage() === 'queue') {
     <div class="page-heading">
       <div>
-        <div class="eyebrow"><span class="eyebrow-dot"></span> REVIEW WORKSPACE</div>
+        <div class="eyebrow"><span class="eyebrow-dot"></span> Submission of RDAs </div>
         <h1>RDAs</h1>
         <p class="summary">{{ queueSummary() }}</p>
       </div>
@@ -74,12 +64,12 @@
     <section class="upload-section" aria-label="Upload documents">
       <div class="upload-header">
         <h2>Upload documents</h2>
-        <span>Two files can be uploaded at a time.</span>
+
       </div>
 
       <div class="upload-grid">
         <label class="upload-field">
-          <span class="upload-field-label">File 1</span>
+          <span class="upload-field-label">RDA</span>
           <span class="file-picker">
             <input
               class="file-picker-input"
@@ -90,13 +80,13 @@
             />
             <span class="file-picker-button">Choose file</span>
             <span class="file-picker-name">
-              {{ selectedFiles()[1]?.name || 'No file chosen' }}
+              {{ selectedFiles()[1]?.name || 'No RDA chosen' }}
             </span>
           </span>
         </label>
 
         <label class="upload-field">
-          <span class="upload-field-label">File 2</span>
+          <span class="upload-field-label">Spreadsheet</span>
           <span class="file-picker">
             <input
               class="file-picker-input"
@@ -107,7 +97,7 @@
             />
             <span class="file-picker-button">Choose file</span>
             <span class="file-picker-name">
-              {{ selectedFiles()[2]?.name || 'No file chosen' }}
+              {{ selectedFiles()[2]?.name || 'No spreadsheet chosen' }}
             </span>
           </span>
         </label>
@@ -269,5 +259,10 @@
       <span class="footer-status"><span></span> All changes saved</span>
       <span>RDA Review <span class="footer-separator">/</span> Reviewer workspace</span>
     </footer>
+    } @else {
+      <section class="skills-page" aria-labelledby="skills-page-title">
+        <h1 id="skills-page-title">No Skills</h1>
+      </section>
+    }
   </main>
 </div>
