@@ -633,6 +633,22 @@ h1 {
   white-space: nowrap;
 }
 
+.uploaded-files {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.download-file {
+  max-width: 100%;
+  text-decoration: none;
+}
+
+.download-file:hover {
+  color: #255fcb;
+  text-decoration: underline;
+}
+
 .version-tag {
   padding: 3px 6px;
   border-radius: 4px;
@@ -812,9 +828,22 @@ h1 {
   background: #1f58c7;
 }
 
+.start-review:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .start-review svg {
   width: 14px;
   height: 14px;
+}
+
+.upload-error {
+  max-width: 190px;
+  color: #b42318;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: right;
 }
 
 .empty-state {

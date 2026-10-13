@@ -1,4 +1,5 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, OnDestroy, signal } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 
 type QueueCategory = 'review' | 'feedback' | 'confirmation' | 'peer';
 
@@ -6,6 +7,24 @@ interface ReviewMetric {
   label: string;
   value: number;
   limit: number;
+}
+
+interface ReviewAttachment {
+  name: string;
+  downloadUrl: string;
+  file: File;
+}
+
+interface IngestResponse {
+  submission_id: string;
+  status: string;
+  processing: string;
+  message: string;
+  files: Array<{
+    filename: string;
+    content_type: string | null;
+    size_bytes: number;
+  }>;
 }
 
 interface ReviewItem {
@@ -20,6 +39,7 @@ interface ReviewItem {
   overdue: boolean;
   category: QueueCategory;
   metrics: ReviewMetric[];
+  attachments?: ReviewAttachment[];
 }
 
 @Component({
@@ -27,103 +47,24 @@ interface ReviewItem {
   styleUrl: './app.scss',
   templateUrl: './app.html',
 })
-export class App {
+export class App implements OnDestroy {
+  private readonly apiUrl = 'http://localhost:8000/api/reviews/ingest';
+
   protected readonly selectedQueue = signal<QueueCategory>('review');
   protected readonly searchTerm = signal('');
   protected readonly calibrationMode = signal(false);
   protected readonly startedReviewId = signal<string | null>(null);
-  protected readonly selectedFiles = signal<Record<number, File | null>>({
+  protected readonly uploadingReviewId = signal<string | null>(null);
+  protected readonly uploadErrors = signal<Record<string, string>>({});
+  protected readonly selectedFiles = signal<Record<1 | 2, File | null>>({
     1: null,
     2: null,
   });
 
-  private readonly reviewItems: ReviewItem[] = [
-    {
-      id: 'PD-2026-0147',
-      organization: 'Instituto Meridiano',
-      organizationInitials: 'IM',
-      project: 'Mobile development training',
-      file: 'Document · Training',
-      amount: 'R$ 1,200,000.00',
-      version: 'v1',
-      age: '4 days',
-      overdue: true,
-      category: 'review',
-      metrics: [
-        { label: 'Financial', value: 95, limit: 95 },
-        { label: 'EPA', value: 100, limit: 100 },
-        { label: 'Operational', value: 98, limit: 95 },
-      ],
-    },
-    {
-      id: 'PD-2026-0132',
-      organization: 'Fundação Horizonte',
-      organizationInitials: 'FH',
-      project: 'Digital inclusion for youth',
-      file: 'Document · Project plan',
-      amount: 'R$ 845,500.00',
-      version: 'v2',
-      age: '1 day',
-      overdue: false,
-      category: 'review',
-      metrics: [
-        { label: 'Financial', value: 88, limit: 95 },
-        { label: 'EPA', value: 92, limit: 100 },
-        { label: 'Operational', value: 96, limit: 95 },
-      ],
-    },
-    {
-      id: 'PD-2026-0126',
-      organization: 'Associação Novo Rumo',
-      organizationInitials: 'NR',
-      project: 'Community health initiative',
-      file: 'Document · Feedback report',
-      amount: 'R$ 620,000.00',
-      version: 'v3',
-      age: '2 days',
-      overdue: false,
-      category: 'feedback',
-      metrics: [
-        { label: 'Financial', value: 91, limit: 95 },
-        { label: 'EPA', value: 97, limit: 100 },
-        { label: 'Operational', value: 94, limit: 95 },
-      ],
-    },
-    {
-      id: 'PD-2026-0119',
-      organization: 'Instituto Caminhos',
-      organizationInitials: 'IC',
-      project: 'Technical education program',
-      file: 'Document · Type review',
-      amount: 'R$ 980,000.00',
-      version: 'v1',
-      age: '3 days',
-      overdue: false,
-      category: 'confirmation',
-      metrics: [
-        { label: 'Financial', value: 93, limit: 95 },
-        { label: 'EPA', value: 89, limit: 100 },
-        { label: 'Operational', value: 97, limit: 95 },
-      ],
-    },
-    {
-      id: 'PD-2026-0108',
-      organization: 'Rede Sementes',
-      organizationInitials: 'RS',
-      project: 'Sustainable agriculture network',
-      file: 'Document · Peer assessment',
-      amount: 'R$ 1,450,000.00',
-      version: 'v4',
-      age: '1 day',
-      overdue: false,
-      category: 'peer',
-      metrics: [
-        { label: 'Financial', value: 96, limit: 95 },
-        { label: 'EPA', value: 100, limit: 100 },
-        { label: 'Operational', value: 92, limit: 95 },
-      ],
-    },
-  ];
+  private readonly reviewItems = signal<ReviewItem[]>([]);
+  private readonly uploadObjectUrls: string[] = [];
+
+  constructor(private readonly http: HttpClient) {}
 
   protected readonly queueCounts = computed(() => {
     const counts: Record<QueueCategory, number> = {
@@ -133,12 +74,16 @@ export class App {
       peer: 0,
     };
 
-    for (const item of this.reviewItems) {
+    for (const item of this.reviewItems()) {
       counts[item.category] += 1;
     }
 
     return counts;
   });
+
+  protected readonly totalQueueCount = computed(() =>
+    Object.values(this.queueCounts()).reduce((total, count) => total + count, 0),
+  );
 
   protected readonly queueFilters = computed(() => {
     const counts = this.queueCounts();
@@ -166,13 +111,14 @@ export class App {
   protected readonly visibleItems = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
 
-    return this.reviewItems.filter((item) => {
+    return this.reviewItems().filter((item) => {
       const matchesQueue = item.category === this.selectedQueue();
       const searchableText = [
         item.organization,
         item.project,
         item.id,
         item.file,
+        ...(item.attachments?.map((attachment) => attachment.name) ?? []),
       ]
         .join(' ')
         .toLocaleLowerCase();
@@ -191,7 +137,7 @@ export class App {
     }
   }
 
-  protected onFileSelected(event: Event, fileSlot: number): void {
+  protected onFileSelected(event: Event, fileSlot: 1 | 2): void {
     const input = event.target as HTMLInputElement | null;
     const file = input?.files?.[0];
 
@@ -200,21 +146,30 @@ export class App {
     }
 
     this.selectedFiles.update((files) => ({ ...files, [fileSlot]: file }));
+    input.value = '';
   }
 
   protected finalizeUpload(): void {
     const files = this.selectedFiles();
+    const firstFile = files[1];
+    const secondFile = files[2];
 
-    if (!files[1] || !files[2]) {
+    if (!firstFile || !secondFile) {
       return;
     }
 
-    this.reviewItems.unshift(
-      this.createUploadedReview(files[2], 2),
-      this.createUploadedReview(files[1], 1),
-    );
+    this.reviewItems.update((items) => [
+      this.createUploadedReview([firstFile, secondFile]),
+      ...items,
+    ]);
     this.selectedFiles.set({ 1: null, 2: null });
     this.selectedQueue.set('review');
+  }
+
+  ngOnDestroy(): void {
+    for (const objectUrl of this.uploadObjectUrls) {
+      URL.revokeObjectURL(objectUrl);
+    }
   }
 
   protected toggleCalibrationMode(): void {
@@ -222,27 +177,52 @@ export class App {
   }
 
   protected startReview(itemId: string): void {
-    this.startedReviewId.set(itemId);
+    const item = this.reviewItems().find((review) => review.id === itemId);
+    const attachments = item?.attachments;
+
+    if (!attachments || attachments.length !== 2 || this.uploadingReviewId()) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file_1', attachments[0].file, attachments[0].name);
+    formData.append('file_2', attachments[1].file, attachments[1].name);
+    this.uploadingReviewId.set(itemId);
+    this.uploadErrors.update((errors) => {
+      const { [itemId]: _previousError, ...remainingErrors } = errors;
+      return remainingErrors;
+    });
+
+    this.http.post<IngestResponse>(this.apiUrl, formData).subscribe({
+      next: () => this.startedReviewId.set(itemId),
+      error: (error: unknown) => {
+        const message = error instanceof HttpErrorResponse
+          ? `Could not send documents to the backend (HTTP ${error.status || 'network error'}).`
+          : 'Could not send documents to the backend.';
+        this.uploadErrors.update((errors) => ({ ...errors, [itemId]: message }));
+        this.uploadingReviewId.set(null);
+      },
+      complete: () => this.uploadingReviewId.set(null),
+    });
   }
 
-  private createUploadedReview(file: File, fileSlot: number): ReviewItem {
-    const baseName = file.name.includes('.') ? file.name.split('.').slice(0, -1).join('.') : file.name;
-    const initials = (baseName || `Upload ${fileSlot}`)
-      .replace(/[^a-zA-Z0-9]/g, '')
-      .slice(0, 2)
-      .toUpperCase() || `U${fileSlot}`;
-
+  private createUploadedReview(files: File[]): ReviewItem {
     return {
-      id: `UP-${Date.now()}-${fileSlot}`,
-      organization: `Uploaded document ${fileSlot}`,
-      organizationInitials: initials,
-      project: `Submission ${fileSlot}`,
-      file: `Document · ${file.name}`,
+      id: `UP-${Date.now()}`,
+      organization: 'New submission',
+      organizationInitials: 'NS',
+      project: 'Uploaded files',
+      file: `${files.length} uploaded documents`,
       amount: 'Pending review',
       version: 'v1',
       age: 'Just now',
       overdue: false,
       category: 'review',
+      attachments: files.map((file) => {
+        const downloadUrl = URL.createObjectURL(file);
+        this.uploadObjectUrls.push(downloadUrl);
+        return { name: file.name, downloadUrl, file };
+      }),
       metrics: [
         { label: 'Financial', value: 0, limit: 95 },
         { label: 'EPA', value: 0, limit: 100 },

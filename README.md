@@ -44,6 +44,25 @@ To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use th
 ng test
 ```
 
+## Mock Python RAG upload endpoint
+
+The `backend` folder contains a mock FastAPI endpoint used by the **Start Review** button. It accepts two multipart files and returns a mock submission ID and file metadata. It does not save files or perform text extraction, chunking, embedding, or vector database operations.
+
+From the project root, create and activate a Python virtual environment, then install and run the API:
+
+```bash
+python -m venv .venv
+```
+
+Activate the environment (`source .venv/bin/activate` on Linux/macOS, or `.\.venv\Scripts\Activate.ps1` in Windows PowerShell), then install and run the API:
+
+```bash
+pip install -r backend/requirements.txt
+uvicorn backend.main:app --reload --port 8000
+```
+
+The Angular development server must run at `http://localhost:4200` for the configured CORS rule. Upload two files, finalize the upload, and click **Start Review** to send both files to `http://localhost:8000/api/reviews/ingest`. Interactive API documentation is available at `http://localhost:8000/docs`.
+
 ## Running end-to-end tests
 
 For end-to-end (e2e) testing, run:

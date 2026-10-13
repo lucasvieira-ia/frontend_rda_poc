@@ -54,7 +54,7 @@
 
     <nav class="primary-nav" aria-label="Primary navigation" role="tablist">
       <button class="primary-tab active" type="button" role="tab" aria-selected="true">
-        My Queue <span class="nav-badge">5</span>
+        My Queue <span class="nav-badge">{{ totalQueueCount() }}</span>
       </button>
       <button class="primary-tab" type="button" role="tab" aria-selected="false">
         Skills
@@ -66,7 +66,7 @@
     <div class="page-heading">
       <div>
         <div class="eyebrow"><span class="eyebrow-dot"></span> REVIEW WORKSPACE</div>
-        <h1>My Queue</h1>
+        <h1>RDAs</h1>
         <p class="summary">{{ queueSummary() }}</p>
       </div>
     </div>
@@ -160,8 +160,23 @@
                   <path d="M14 3.75v4h4M9 13h6M9 16h6"></path>
                 </svg>
               </span>
-              <span class="file-name">{{ item.file }}</span>
-              <span class="version-tag">{{ item.version }}</span>
+              @if (item.attachments?.length) {
+                <div class="uploaded-files" aria-label="Uploaded files">
+                  @for (attachment of item.attachments; track attachment.downloadUrl) {
+                    <a
+                      class="file-name download-file"
+                      [href]="attachment.downloadUrl"
+                      [download]="attachment.name"
+                      [title]="'Download ' + attachment.name"
+                    >
+                      {{ attachment.name }}
+                    </a>
+                  }
+                </div>
+              } @else {
+                <span class="file-name">{{ item.file }}</span>
+                <span class="version-tag">{{ item.version }}</span>
+              }
             </div>
             <div class="amount">{{ item.amount }}</div>
           </div>
@@ -214,12 +229,26 @@
                 Deadline exceeded
               </span>
             }
-            <button class="start-review" type="button" (click)="startReview(item.id)">
-              {{ startedReviewId() === item.id ? 'Continue review' : 'Start Review' }}
+            <button
+              class="start-review"
+              type="button"
+              [disabled]="uploadingReviewId() !== null || startedReviewId() === item.id"
+              (click)="startReview(item.id)"
+            >
+              {{
+                uploadingReviewId() === item.id
+                  ? 'Sending documents...'
+                  : startedReviewId() === item.id
+                    ? 'Documents sent'
+                    : 'Start Review'
+              }}
               <svg viewBox="0 0 20 20" aria-hidden="true">
                 <path d="M4 10h11M10 5l5 5-5 5"></path>
               </svg>
             </button>
+            @if (uploadErrors()[item.id]; as uploadError) {
+              <p class="upload-error" role="alert">{{ uploadError }}</p>
+            }
           </div>
         </article>
       } @empty {
