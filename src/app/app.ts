@@ -2,7 +2,14 @@ import { Component, computed, OnDestroy, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 
 type QueueCategory = 'review' | 'feedback';
+type QueueTab = 'upload' | QueueCategory;
 type PrimaryPage = 'queue' | 'skills';
+
+interface QueueFilter {
+  key: QueueTab;
+  label: string;
+  count?: number;
+}
 
 interface ReviewMetric {
   label: string;
@@ -52,7 +59,7 @@ export class App implements OnDestroy {
   private readonly apiUrl = 'http://localhost:8000/api/reviews/ingest';
 
   protected readonly activePage = signal<PrimaryPage>('queue');
-  protected readonly selectedQueue = signal<QueueCategory>('review');
+  protected readonly selectedQueue = signal<QueueTab>('upload');
   protected readonly searchTerm = signal('');
   protected readonly startedReviewId = signal<string | null>(null);
   protected readonly uploadingReviewId = signal<string | null>(null);
@@ -84,13 +91,14 @@ export class App implements OnDestroy {
     Object.values(this.queueCounts()).reduce((total, count) => total + count, 0),
   );
 
-  protected readonly queueFilters = computed(() => {
+  protected readonly queueFilters = computed<QueueFilter[]>(() => {
     const counts = this.queueCounts();
 
     return [
+      { key: 'upload', label: 'Upload documents' },
       { key: 'review', label: 'To review', count: counts.review },
       { key: 'feedback', label: 'Feedbacks to approve', count: counts.feedback },
-    ] as const;
+    ];
   });
 
   protected readonly queueSummary = computed(() => {
@@ -105,9 +113,10 @@ export class App implements OnDestroy {
 
   protected readonly visibleItems = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
+    const selectedQueue = this.selectedQueue();
 
     return this.reviewItems().filter((item) => {
-      const matchesQueue = item.category === this.selectedQueue();
+      const matchesQueue = selectedQueue !== 'upload' && item.category === selectedQueue;
       const searchableText = [
         item.organization,
         item.project,
@@ -122,7 +131,7 @@ export class App implements OnDestroy {
     });
   });
 
-  protected selectQueue(queue: QueueCategory): void {
+  protected selectQueue(queue: QueueTab): void {
     this.selectedQueue.set(queue);
   }
 

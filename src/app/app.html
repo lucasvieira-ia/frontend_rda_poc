@@ -36,7 +36,7 @@
         [attr.aria-selected]="activePage() === 'queue'"
         (click)="selectPage('queue')"
       >
-        My Queue <span class="nav-badge">{{ totalQueueCount() }}</span>
+        RDAs <span class="nav-badge">{{ totalQueueCount() }}</span>
       </button>
       <button
         class="primary-tab"
@@ -61,10 +61,35 @@
       </div>
     </div>
 
-    <section class="upload-section" aria-label="Upload documents">
+    <nav class="queue-tabs" aria-label="Queue sections" role="tablist">
+      @for (filter of queueFilters(); track filter.key) {
+        <button
+          class="queue-tab"
+          type="button"
+          role="tab"
+          [id]="'queue-tab-' + filter.key"
+          [class.active]="selectedQueue() === filter.key"
+          [attr.aria-selected]="selectedQueue() === filter.key"
+          [attr.aria-controls]="filter.key === 'upload' ? 'upload-panel' : 'queue-panel'"
+          (click)="selectQueue(filter.key)"
+        >
+          {{ filter.label }}
+          @if (filter.count !== undefined) {
+            <span class="count-badge">{{ filter.count }}</span>
+          }
+        </button>
+      }
+    </nav>
+
+    @if (selectedQueue() === 'upload') {
+    <section
+      id="upload-panel"
+      class="upload-section"
+      role="tabpanel"
+      aria-labelledby="queue-tab-upload"
+    >
       <div class="upload-header">
         <h2>Upload documents</h2>
-
       </div>
 
       <div class="upload-grid">
@@ -114,24 +139,14 @@
         </button>
       </div>
     </section>
-
-    <nav class="queue-tabs" aria-label="Filter queue" role="tablist">
-      @for (filter of queueFilters(); track filter.key) {
-        <button
-          class="queue-tab"
-          type="button"
-          role="tab"
-          [class.active]="selectedQueue() === filter.key"
-          [attr.aria-selected]="selectedQueue() === filter.key"
-          (click)="selectQueue(filter.key)"
-        >
-          {{ filter.label }}
-          <span class="count-badge">{{ filter.count }}</span>
-        </button>
-      }
-    </nav>
-
-    <section class="queue-list" aria-label="Reviews to complete">
+    } @else {
+    <section
+      id="queue-panel"
+      class="queue-list"
+      role="tabpanel"
+      [attr.aria-labelledby]="'queue-tab-' + selectedQueue()"
+      aria-label="Reviews to complete"
+    >
       @for (item of visibleItems(); track item.id) {
         <article class="review-card">
           <div class="project-column">
@@ -254,6 +269,7 @@
         </div>
       }
     </section>
+    }
 
     <footer class="page-footer">
       <span class="footer-status"><span></span> All changes saved</span>

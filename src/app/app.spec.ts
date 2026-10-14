@@ -18,15 +18,19 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render an empty review queue before files are uploaded', async () => {
+  it('should show Upload documents as the first queue tab by default', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('My Queue');
+    const queueTabs = compiled.querySelectorAll<HTMLButtonElement>('.queue-tab');
+
+    expect(compiled.querySelector('.primary-tab')?.textContent).toContain('RDAs');
+    expect(queueTabs[0].textContent).toContain('Upload documents');
+    expect(queueTabs[1].textContent).toContain('To review');
+    expect(queueTabs[0].getAttribute('aria-selected')).toBe('true');
+    expect(compiled.querySelector('.upload-section')).not.toBeNull();
     expect(compiled.querySelectorAll('.review-card').length).toBe(0);
-    expect(compiled.querySelector('.empty-state h2')?.textContent)
-      .toContain('No matching reviews');
   });
 
   it('should show the No Skills page and return to the queue', async () => {
@@ -48,18 +52,24 @@ describe('App', () => {
     expect(tabs[0].getAttribute('aria-selected')).toBe('true');
   });
 
-  it('should filter the queue by review type', async () => {
+  it('should switch from uploads to the selected review queue', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    const feedbackTab = Array.from(compiled.querySelectorAll<HTMLButtonElement>('.queue-tab'))
-      .find((tab) => tab.textContent?.includes('Feedbacks to approve'));
+    const queueTabs = compiled.querySelectorAll<HTMLButtonElement>('.queue-tab');
 
-    feedbackTab?.click();
+    queueTabs[1].click();
+    fixture.detectChanges();
+    expect(compiled.querySelector('.upload-section')).toBeNull();
+    expect(queueTabs[1].getAttribute('aria-selected')).toBe('true');
+
+    queueTabs[2].click();
     fixture.detectChanges();
 
-    expect(compiled.querySelectorAll('.review-card').length).toBe(1);
+    expect(compiled.querySelector('#queue-panel')).not.toBeNull();
+    expect(queueTabs[2].getAttribute('aria-selected')).toBe('true');
+    expect(compiled.querySelectorAll('.review-card').length).toBe(0);
     expect(compiled.querySelector('.empty-state h2')?.textContent)
       .toContain('No matching reviews');
   });
