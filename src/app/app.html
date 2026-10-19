@@ -99,8 +99,8 @@
             <input
               class="file-picker-input"
               type="file"
-              accept=".pdf,.doc,.docx,.xlsx,.pptx,.txt"
-              aria-label="Choose the first document"
+              accept=".docx"
+              aria-label="Choose the RDA DOCX document"
               (change)="onFileSelected($event, 1)"
             />
             <span class="file-picker-button">Choose file</span>
@@ -111,13 +111,13 @@
         </label>
 
         <label class="upload-field">
-          <span class="upload-field-label">Spreadsheet</span>
+          <span class="upload-field-label">Spreadsheet (optional)</span>
           <span class="file-picker">
             <input
               class="file-picker-input"
               type="file"
-              accept=".pdf,.doc,.docx,.xlsx,.pptx,.txt"
-              aria-label="Choose the second document"
+              accept=".xlsx"
+              aria-label="Choose the optional spreadsheet"
               (change)="onFileSelected($event, 2)"
             />
             <span class="file-picker-button">Choose file</span>
@@ -128,11 +128,11 @@
         </label>
       </div>
       <div class="upload-actions">
-        <span>Select both files before finalizing the upload.</span>
+        <span>Choose an RDA. A spreadsheet is optional.</span>
         <button
           class="finalize-upload"
           type="button"
-          [disabled]="!selectedFiles()[1] || !selectedFiles()[2]"
+          [disabled]="!selectedFiles()[1]"
           (click)="finalizeUpload()"
         >
           Finalize upload
@@ -166,16 +166,18 @@
                 </svg>
               </span>
               @if (item.attachments?.length) {
-                <div class="uploaded-files" aria-label="Uploaded files">
+                <div class="review-file-list" aria-label="Review documents">
                   @for (attachment of item.attachments; track attachment.downloadUrl) {
-                    <a
-                      class="file-name download-file"
-                      [href]="attachment.downloadUrl"
-                      [download]="attachment.name"
-                      [title]="'Download ' + attachment.name"
-                    >
-                      {{ attachment.name }}
-                    </a>
+                    <div class="review-file">
+                      <strong>{{ attachment.role }}</strong>
+                      <a
+                        [href]="attachment.downloadUrl"
+                        [download]="attachment.name"
+                        [title]="'Download ' + attachment.name"
+                      >
+                        {{ attachment.name }}
+                      </a>
+                    </div>
                   }
                 </div>
               } @else {
@@ -237,24 +239,36 @@
             <button
               class="start-review"
               type="button"
-              [disabled]="uploadingReviewId() !== null || startedReviewId() === item.id"
+              [disabled]="item.preparingPreview || item.reviewStarted"
               (click)="startReview(item.id)"
             >
               {{
-                uploadingReviewId() === item.id
-                  ? 'Sending documents...'
-                  : startedReviewId() === item.id
-                    ? 'Documents sent'
+                item.preparingPreview
+                  ? 'Preparing RDA...'
+                  : item.reviewStarted
+                    ? 'Review started'
                     : 'Start Review'
               }}
               <svg viewBox="0 0 20 20" aria-hidden="true">
                 <path d="M4 10h11M10 5l5 5-5 5"></path>
               </svg>
             </button>
-            @if (uploadErrors()[item.id]; as uploadError) {
-              <p class="upload-error" role="alert">{{ uploadError }}</p>
-            }
           </div>
+
+          @if (item.reviewStarted) {
+            <section class="document-preview" aria-label="RDA document preview">
+              @if (item.preparingPreview) {
+                <p>Preparing the RDA preview...</p>
+              } @else if (item.previewError; as previewError) {
+                <p class="preview-error" role="alert">{{ previewError }}</p>
+              } @else if (item.docxPreviewHtml) {
+                <h3>RDA preview</h3>
+                <div class="docx-preview-viewport">
+                  <div class="docx-preview" [innerHTML]="item.docxPreviewHtml"></div>
+                </div>
+              }
+            </section>
+          }
         </article>
       } @empty {
         <div class="empty-state">

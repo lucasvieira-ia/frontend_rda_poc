@@ -592,20 +592,116 @@ h1 {
   white-space: nowrap;
 }
 
-.uploaded-files {
+.document-preview {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  padding-top: 17px;
+  border-top: 1px solid #edf0f4;
+}
+
+.document-preview h3 {
+  color: #243650;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.docx-preview-viewport {
+  max-height: 72vh;
+  overflow: auto;
+  margin-top: 12px;
+  padding: 18px;
+  border: 1px solid #dce4ee;
+  border-radius: 7px;
+  background: #eef1f5;
+}
+
+.docx-preview {
+  box-sizing: border-box;
+  width: min(8.5in, 100%);
+  min-height: 11in;
+  margin: 0 auto;
+  padding: clamp(24px, 8%, 1in);
+  border: 1px solid #dce4ee;
+  box-shadow: 0 2px 8px rgba(29, 48, 76, 0.12);
+  background: #fff;
+  color: #243650;
+  line-height: 1.6;
+}
+
+.docx-preview :first-child {
+  margin-top: 0;
+}
+
+.docx-preview img {
+  max-width: 100%;
+}
+
+@media print {
+  .docx-preview-viewport {
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+    border: 0;
+    background: #fff;
+  }
+
+  .docx-preview {
+    width: 100%;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+  }
+}
+
+.preview-error {
+  color: #b42318 !important;
+}
+
+.review-file-list {
   display: grid;
   min-width: 0;
   gap: 5px;
 }
 
-.download-file {
-  max-width: 100%;
-  text-decoration: none;
+.review-file {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 10px;
 }
 
-.download-file:hover {
-  color: #255fcb;
+.review-file strong {
+  flex: 0 0 90px;
+  color: #65758b;
+  font-size: 12px;
+}
+
+.review-file a {
+  overflow: hidden;
+  color: #2868df;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review-file a:hover {
   text-decoration: underline;
+}
+
+.document-preview p {
+  margin-top: 6px;
+  color: #65758b;
+  font-size: 12px;
+}
+
+.document-preview h4 {
+  margin-top: 18px;
+  color: #243650;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .version-tag {

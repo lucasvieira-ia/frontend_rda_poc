@@ -1,16 +1,17 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import * as mammoth from 'mammoth';
+import { vi } from 'vitest';
 import { App } from './app';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
     })
       .compileComponents();
   });
+
+  afterEach(() => vi.restoreAllMocks());
 
   it('should create the app', () => {
     const fixture = TestBed.createComponent(App);
@@ -74,14 +75,24 @@ describe('App', () => {
       .toContain('No matching reviews');
   });
 
-  it('should send both uploaded files to the mock backend when starting a review', async () => {
+  it('should mock-start a review and show the DOCX in Feedbacks to approve', async () => {
     const fixture = TestBed.createComponent(App);
-    const httpTesting = TestBed.inject(HttpTestingController);
+    vi.spyOn(mammoth, 'convertToHtml').mockResolvedValue({
+      value: '<p>Mock RDA contents</p>',
+      messages: [],
+    });
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const firstFile = new File(['first document'], 'first.pdf', { type: 'application/pdf' });
-    const secondFile = new File(['second document'], 'second.pdf', { type: 'application/pdf' });
+    const firstFile = new File(['docx data'], 'RDA.docx', {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+    Object.defineProperty(firstFile, 'arrayBuffer', {
+      value: vi.fn().mockResolvedValue(new ArrayBuffer(0)),
+    });
+    const secondFile = new File(['spreadsheet data'], 'spreadsheet.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
     const fileInputs = fixture.nativeElement.querySelectorAll('input[type="file"]');
 
     for (const [index, file] of [firstFile, secondFile].entries()) {
@@ -91,24 +102,58 @@ describe('App', () => {
 
     fixture.nativeElement.querySelector<HTMLButtonElement>('.finalize-upload').click();
     fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector<HTMLAnchorElement>('a[download="RDA.docx"]'))
+      .not.toBeNull();
+    expect(fixture.nativeElement.querySelector<HTMLAnchorElement>(
+      'a[download="spreadsheet.xlsx"]',
+    )).not.toBeNull();
     fixture.nativeElement.querySelector<HTMLButtonElement>('.start-review').click();
-
-    const request = httpTesting.expectOne('http://localhost:8000/api/reviews/ingest');
-    expect(request.request.method).toBe('POST');
-    expect((request.request.body.get('file_1') as File).name).toBe('first.pdf');
-    expect((request.request.body.get('file_2') as File).name).toBe('second.pdf');
-
-    request.flush({
-      submission_id: 'mock-submission-123',
-      status: 'accepted',
-      processing: 'mock_only',
-      message: 'Files received.',
-      files: [],
-    });
-
+    await fixture.whenStable();
     fixture.detectChanges();
+    const queueTabs = fixture.nativeElement.querySelectorAll<HTMLButtonElement>('.queue-tab');
+    expect(queueTabs[2].getAttribute('aria-selected')).toBe('true');
     expect(fixture.nativeElement.querySelector('.start-review')?.textContent)
-      .toContain('Documents sent');
-    httpTesting.verify();
+      .toContain('Review started');
+    expect(fixture.nativeElement.querySelector('.docx-preview')?.textContent)
+      .toContain('Mock RDA contents');
+    expect(fixture.nativeElement.querySelector<HTMLAnchorElement>(
+      'a[download="spreadsheet.xlsx"]',
+    )).not.toBeNull();
+  });
+
+  it('should mock-start an RDA-only review without calling the backend', async () => {
+    const fixture = TestBed.createComponent(App);
+    vi.spyOn(mammoth, 'convertToHtml').mockResolvedValue({
+      value: '<p>RDA without spreadsheet</p>',
+      messages: [],
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const rda = new File(['docx data'], 'RDA.docx', {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+    Object.defineProperty(rda, 'arrayBuffer', {
+      value: vi.fn().mockResolvedValue(new ArrayBuffer(0)),
+    });
+    const fileInputs = fixture.nativeElement.querySelectorAll('input[type="file"]');
+    Object.defineProperty(fileInputs[0], 'files', { value: [rda] });
+    fileInputs[0].dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    const finalizeButton = fixture.nativeElement.querySelector<HTMLButtonElement>('.finalize-upload');
+    expect(finalizeButton?.disabled).toBe(false);
+    finalizeButton?.click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector<HTMLAnchorElement>('a[download="RDA.docx"]'))
+      .not.toBeNull();
+    expect(fixture.nativeElement.querySelector<HTMLAnchorElement>('a[download="spreadsheet.xlsx"]'))
+      .toBeNull();
+    fixture.nativeElement.querySelector<HTMLButtonElement>('.start-review').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.docx-preview')?.textContent)
+      .toContain('RDA without spreadsheet');
+    expect(fixture.nativeElement.querySelectorAll('.review-file').length).toBe(1);
   });
 });

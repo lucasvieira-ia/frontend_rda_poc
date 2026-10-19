@@ -1,5 +1,5 @@
 import { Component, computed, OnDestroy, signal } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import * as mammoth from 'mammoth';
 
 type QueueCategory = 'review' | 'feedback';
 type QueueTab = 'upload' | QueueCategory;
@@ -19,20 +19,9 @@ interface ReviewMetric {
 
 interface ReviewAttachment {
   name: string;
+  role: 'RDA' | 'Spreadsheet';
   downloadUrl: string;
   file: File;
-}
-
-interface IngestResponse {
-  submission_id: string;
-  status: string;
-  processing: string;
-  message: string;
-  files: Array<{
-    filename: string;
-    content_type: string | null;
-    size_bytes: number;
-  }>;
 }
 
 interface ReviewItem {
@@ -48,6 +37,10 @@ interface ReviewItem {
   category: QueueCategory;
   metrics: ReviewMetric[];
   attachments?: ReviewAttachment[];
+  reviewStarted?: boolean;
+  preparingPreview?: boolean;
+  docxPreviewHtml?: string;
+  previewError?: string;
 }
 
 @Component({
@@ -56,14 +49,9 @@ interface ReviewItem {
   templateUrl: './app.html',
 })
 export class App implements OnDestroy {
-  private readonly apiUrl = 'http://localhost:8000/api/reviews/ingest';
-
   protected readonly activePage = signal<PrimaryPage>('queue');
   protected readonly selectedQueue = signal<QueueTab>('upload');
   protected readonly searchTerm = signal('');
-  protected readonly startedReviewId = signal<string | null>(null);
-  protected readonly uploadingReviewId = signal<string | null>(null);
-  protected readonly uploadErrors = signal<Record<string, string>>({});
   protected readonly selectedFiles = signal<Record<1 | 2, File | null>>({
     1: null,
     2: null,
@@ -71,8 +59,6 @@ export class App implements OnDestroy {
 
   private readonly reviewItems = signal<ReviewItem[]>([]);
   private readonly uploadObjectUrls: string[] = [];
-
-  constructor(private readonly http: HttpClient) {}
 
   protected readonly queueCounts = computed(() => {
     const counts: Record<QueueCategory, number> = {
@@ -162,12 +148,12 @@ export class App implements OnDestroy {
     const firstFile = files[1];
     const secondFile = files[2];
 
-    if (!firstFile || !secondFile) {
+    if (!firstFile) {
       return;
     }
 
     this.reviewItems.update((items) => [
-      this.createUploadedReview([firstFile, secondFile]),
+      this.createUploadedReview(secondFile ? [firstFile, secondFile] : [firstFile]),
       ...items,
     ]);
     this.selectedFiles.set({ 1: null, 2: null });
@@ -180,34 +166,43 @@ export class App implements OnDestroy {
     }
   }
 
-  protected startReview(itemId: string): void {
+  protected async startReview(itemId: string): Promise<void> {
     const item = this.reviewItems().find((review) => review.id === itemId);
-    const attachments = item?.attachments;
+    const rda = item?.attachments?.find((attachment) => attachment.role === 'RDA');
 
-    if (!attachments || attachments.length !== 2 || this.uploadingReviewId()) {
+    if (!item || !rda || item.reviewStarted) {
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file_1', attachments[0].file, attachments[0].name);
-    formData.append('file_2', attachments[1].file, attachments[1].name);
-    this.uploadingReviewId.set(itemId);
-    this.uploadErrors.update((errors) => {
-      const { [itemId]: _previousError, ...remainingErrors } = errors;
-      return remainingErrors;
-    });
+    this.reviewItems.update((items) => items.map((review) =>
+      review.id === itemId
+        ? { ...review, category: 'feedback', reviewStarted: true, preparingPreview: true }
+        : review,
+    ));
+    this.selectedQueue.set('feedback');
 
-    this.http.post<IngestResponse>(this.apiUrl, formData).subscribe({
-      next: () => this.startedReviewId.set(itemId),
-      error: (error: unknown) => {
-        const message = error instanceof HttpErrorResponse
-          ? `Could not send documents to the backend (HTTP ${error.status || 'network error'}).`
-          : 'Could not send documents to the backend.';
-        this.uploadErrors.update((errors) => ({ ...errors, [itemId]: message }));
-        this.uploadingReviewId.set(null);
-      },
-      complete: () => this.uploadingReviewId.set(null),
-    });
+    try {
+      const result = await mammoth.convertToHtml({
+        arrayBuffer: await rda.file.arrayBuffer(),
+      });
+      if (!result.value.trim()) {
+        throw new Error('The document contains no previewable text.');
+      }
+      this.updateReview(itemId, { docxPreviewHtml: result.value });
+    } catch (error: unknown) {
+      const reason = error instanceof Error ? ` ${error.message}` : '';
+      this.updateReview(itemId, {
+        previewError: `Could not display the DOCX preview.${reason}`,
+      });
+    } finally {
+      this.updateReview(itemId, { preparingPreview: false });
+    }
+  }
+
+  private updateReview(itemId: string, changes: Partial<ReviewItem>): void {
+    this.reviewItems.update((items) => items.map((item) =>
+      item.id === itemId ? { ...item, ...changes } : item,
+    ));
   }
 
   private createUploadedReview(files: File[]): ReviewItem {
@@ -222,10 +217,15 @@ export class App implements OnDestroy {
       age: 'Just now',
       overdue: false,
       category: 'review',
-      attachments: files.map((file) => {
+      attachments: files.map((file, index) => {
         const downloadUrl = URL.createObjectURL(file);
         this.uploadObjectUrls.push(downloadUrl);
-        return { name: file.name, downloadUrl, file };
+        return {
+          name: file.name,
+          role: index === 0 ? 'RDA' : 'Spreadsheet',
+          downloadUrl,
+          file,
+        };
       }),
       metrics: [
         { label: 'Financial', value: 0, limit: 95 },
