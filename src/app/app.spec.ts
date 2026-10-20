@@ -166,7 +166,7 @@ describe('RdaReviewContainer', () => {
 
     fixture.detectChanges();
     expect(compiled.querySelector('.analysis-loading')?.textContent)
-      .toContain('Your files are being analyzed');
+      .toContain('Your files are being analyzed by our agent.');
     expect(compiled.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(compiled.querySelector('.step-item.completed .step-connector')).not.toBeNull();
 

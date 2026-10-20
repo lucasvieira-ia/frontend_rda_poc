@@ -26,7 +26,9 @@ import { Step } from '../../models/rda-review.models';
               </span>
               <span class="step-copy">
                 <strong>{{ step.label }}</strong>
-                <span>{{ step.description }}</span>
+                @if (step.description) {
+                  <span>{{ step.description }}</span>
+                }
               </span>
             </button>
             @if (!last) {

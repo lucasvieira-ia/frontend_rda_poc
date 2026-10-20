@@ -10,7 +10,6 @@ import { RdaSubmitActionsComponent } from '../rda-submit-actions/rda-submit-acti
   template: `
     <section class="preparation-step" aria-labelledby="preparation-title">
       <div class="section-heading">
-        <span class="section-eyebrow">STEP 1 OF 2</span>
         <h2 id="preparation-title">Prepare your documents</h2>
         <p>Add both the RDA document and its spreadsheet to continue.</p>
       </div>
