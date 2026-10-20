@@ -5,26 +5,6 @@
         <span class="brand-mark">R</span>
         <span class="brand-name">rda<span>review</span></span>
       </a>
-
-      <label class="search-box">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="10.8" cy="10.8" r="6.8"></circle>
-          <path d="m16 16 4.2 4.2"></path>
-        </svg>
-        <input
-          type="search"
-          placeholder="Search partner, project, or ID"
-          aria-label="Search partner, project, or ID"
-          (input)="onSearch($event)"
-        />
-        <kbd>⌘ K</kbd>
-      </label>
-
-      <div class="user-controls">
-        <button class="avatar" type="button" aria-label="Account menu for Camila Martins">
-          CM
-        </button>
-      </div>
     </div>
 
     <nav class="primary-nav" aria-label="Primary navigation" role="tablist">
@@ -36,7 +16,7 @@
         [attr.aria-selected]="activePage() === 'queue'"
         (click)="selectPage('queue')"
       >
-        RDAs <span class="nav-badge">{{ totalQueueCount() }}</span>
+        RDAs
       </button>
       <button
         class="primary-tab"
@@ -57,44 +37,45 @@
       <div>
         <div class="eyebrow"><span class="eyebrow-dot"></span> Submission of RDAs </div>
         <h1>RDAs</h1>
-        <p class="summary">{{ queueSummary() }}</p>
       </div>
     </div>
 
-    <nav class="queue-tabs" aria-label="Queue sections" role="tablist">
-      @for (filter of queueFilters(); track filter.key) {
-        <button
-          class="queue-tab"
-          type="button"
-          role="tab"
-          [id]="'queue-tab-' + filter.key"
-          [class.active]="selectedQueue() === filter.key"
-          [attr.aria-selected]="selectedQueue() === filter.key"
-          [attr.aria-controls]="filter.key === 'upload' ? 'upload-panel' : 'queue-panel'"
-          (click)="selectQueue(filter.key)"
-        >
-          {{ filter.label }}
-          @if (filter.count !== undefined) {
-            <span class="count-badge">{{ filter.count }}</span>
-          }
-        </button>
-      }
+    <nav class="workflow-stepper" aria-label="RDA workflow">
+      <ol class="workflow-step-list">
+        @for (filter of queueFilters(); track filter.key) {
+          <li class="workflow-step" [class.completed]="isStepCompleted(filter.key)">
+            <button
+              class="workflow-step-button"
+              type="button"
+              [id]="'workflow-step-' + filter.key"
+              [class.active]="selectedQueue() === filter.key"
+              [attr.aria-current]="selectedQueue() === filter.key ? 'step' : null"
+              [attr.aria-controls]="filter.key === 'upload' ? 'upload-panel' : 'queue-panel'"
+              (click)="selectQueue(filter.key)"
+            >
+              <span class="workflow-step-indicator" aria-hidden="true">✓</span>
+              <span class="workflow-step-caption">
+                <span class="workflow-step-label">{{ filter.label }}</span>
+              </span>
+            </button>
+          </li>
+        }
+      </ol>
     </nav>
 
     @if (selectedQueue() === 'upload') {
     <section
       id="upload-panel"
       class="upload-section"
-      role="tabpanel"
-      aria-labelledby="queue-tab-upload"
+      aria-labelledby="workflow-step-upload"
     >
-      <div class="upload-header">
+      <!-- <div class="upload-header">
         <h2>Upload documents</h2>
-      </div>
+      </div> -->
 
       <div class="upload-grid">
         <label class="upload-field">
-          <span class="upload-field-label">RDA</span>
+          <span class="upload-field-label">RDA (.DOCX)</span>
           <span class="file-picker">
             <input
               class="file-picker-input"
@@ -111,7 +92,7 @@
         </label>
 
         <label class="upload-field">
-          <span class="upload-field-label">Spreadsheet (optional)</span>
+          <span class="upload-field-label">Spreadsheet (.XLSX)</span>
           <span class="file-picker">
             <input
               class="file-picker-input"
@@ -128,7 +109,7 @@
         </label>
       </div>
       <div class="upload-actions">
-        <span>Choose an RDA. A spreadsheet is optional.</span>
+        <span><b>A spreadsheet is optional.*</b></span>
         <button
           class="finalize-upload"
           type="button"
@@ -143,13 +124,72 @@
     <section
       id="queue-panel"
       class="queue-list"
-      role="tabpanel"
-      [attr.aria-labelledby]="'queue-tab-' + selectedQueue()"
-      aria-label="Reviews to complete"
+      [attr.aria-labelledby]="'workflow-step-' + selectedQueue()"
     >
       @for (item of visibleItems(); track item.id) {
-        <article class="review-card">
-          <div class="project-column">
+        <article class="review-card" [class.review-card-feedback]="item.reviewStarted">
+          @if (item.reviewStarted) {
+            <section class="document-preview" aria-label="Backend-generated RDA preview">
+              @if (item.generatedRdaUrl) {
+                <div class="generated-rda-heading">
+                  <h2>RDA with Comments</h2>
+                  <a
+                    class="generated-rda-download"
+                    [href]="item.generatedRdaUrl"
+                    download="Mock_RDA.docx"
+                  >
+                    Download generated RDA
+                  </a>
+                </div>
+              }
+              @if (item.preparingPreview) {
+                <p>Preparing the generated RDA preview...</p>
+              } @else if (item.previewError; as previewError) {
+                <p class="preview-error" role="alert">{{ previewError }}</p>
+              } @else if (item.docxPreviewHtml) {
+                @if (item.commentError; as commentError) {
+                  <p class="preview-error" role="alert">{{ commentError }}</p>
+                }
+                <div class="docx-preview-viewport">
+                  <div class="docx-preview" [innerHTML]="item.docxPreviewHtml"></div>
+                </div>
+                <section class="document-comments" aria-label="RDA comments">
+                  <h3>Comments ({{ item.comments?.length ?? 0 }})</h3>
+                  @if (item.comments?.length) {
+                    <ol class="document-comment-list">
+                      @for (comment of item.comments; track comment.id) {
+                        <li class="document-comment">
+                          <div class="document-comment-heading">
+                            <span
+                              class="document-comment-severity"
+                              [class.document-comment-severity-error]="comment.severity === 'error'"
+                              [class.document-comment-severity-warning]="comment.severity === 'warning'"
+                            >
+                              {{
+                                comment.severity === 'error'
+                                  ? 'Error'
+                                  : comment.severity === 'warning'
+                                    ? 'Warning'
+                                    : 'Comment'
+                              }}
+                            </span>
+                            <span class="document-comment-author">{{ comment.author }}</span>
+                          </div>
+                          @if (comment.quote) {
+                            <blockquote>{{ comment.quote }}</blockquote>
+                          }
+                          <p>{{ comment.text }}</p>
+                        </li>
+                      }
+                    </ol>
+                  } @else {
+                    <p>No comments were found in this document.</p>
+                  }
+                </section>
+              }
+            </section>
+          } @else {
+            <div class="project-column">
             <div class="organization-line">
               <span class="organization-avatar">{{ item.organizationInitials }}</span>
               <div>
@@ -186,9 +226,9 @@
               }
             </div>
             <div class="amount">{{ item.amount }}</div>
-          </div>
+            </div>
 
-          <div class="metrics-column">
+            <div class="metrics-column">
             <div class="project-id">
               <span>PROJECT ID</span>
               <strong>{{ item.id }}</strong>
@@ -218,9 +258,9 @@
                 </div>
               }
             </div>
-          </div>
+            </div>
 
-          <div class="action-column">
+            <div class="action-column">
             <div class="deadline">
               <span class="clock-icon" aria-hidden="true">
                 <svg viewBox="0 0 20 20">
@@ -253,21 +293,7 @@
                 <path d="M4 10h11M10 5l5 5-5 5"></path>
               </svg>
             </button>
-          </div>
-
-          @if (item.reviewStarted) {
-            <section class="document-preview" aria-label="RDA document preview">
-              @if (item.preparingPreview) {
-                <p>Preparing the RDA preview...</p>
-              } @else if (item.previewError; as previewError) {
-                <p class="preview-error" role="alert">{{ previewError }}</p>
-              } @else if (item.docxPreviewHtml) {
-                <h3>RDA preview</h3>
-                <div class="docx-preview-viewport">
-                  <div class="docx-preview" [innerHTML]="item.docxPreviewHtml"></div>
-                </div>
-              }
-            </section>
+            </div>
           }
         </article>
       } @empty {
@@ -286,7 +312,6 @@
     }
 
     <footer class="page-footer">
-      <span class="footer-status"><span></span> All changes saved</span>
       <span>RDA Review <span class="footer-separator">/</span> Reviewer workspace</span>
     </footer>
     } @else {

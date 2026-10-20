@@ -1,5 +1,8 @@
-import { Component, computed, OnDestroy, signal } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import * as mammoth from 'mammoth';
+import { firstValueFrom } from 'rxjs';
+import { DocxComment, extractDocxComments } from './docx-comments';
 
 type QueueCategory = 'review' | 'feedback';
 type QueueTab = 'upload' | QueueCategory;
@@ -8,7 +11,6 @@ type PrimaryPage = 'queue' | 'skills';
 interface QueueFilter {
   key: QueueTab;
   label: string;
-  count?: number;
 }
 
 interface ReviewMetric {
@@ -40,7 +42,10 @@ interface ReviewItem {
   reviewStarted?: boolean;
   preparingPreview?: boolean;
   docxPreviewHtml?: string;
+  generatedRdaUrl?: string;
+  comments?: DocxComment[];
   previewError?: string;
+  commentError?: string;
 }
 
 @Component({
@@ -49,9 +54,9 @@ interface ReviewItem {
   templateUrl: './app.html',
 })
 export class App implements OnDestroy {
+  private readonly http = inject(HttpClient);
   protected readonly activePage = signal<PrimaryPage>('queue');
   protected readonly selectedQueue = signal<QueueTab>('upload');
-  protected readonly searchTerm = signal('');
   protected readonly selectedFiles = signal<Record<1 | 2, File | null>>({
     1: null,
     2: null,
@@ -78,57 +83,32 @@ export class App implements OnDestroy {
   );
 
   protected readonly queueFilters = computed<QueueFilter[]>(() => {
-    const counts = this.queueCounts();
-
     return [
       { key: 'upload', label: 'Upload documents' },
-      { key: 'review', label: 'To review', count: counts.review },
-      { key: 'feedback', label: 'Feedbacks to approve', count: counts.feedback },
+      { key: 'review', label: 'To review' },
+      { key: 'feedback', label: 'Feedbacks' },
     ];
-  });
-
-  protected readonly queueSummary = computed(() => {
-    const counts = this.queueCounts();
-    const summary = [
-      `${counts.review} ${counts.review === 1 ? 'review' : 'reviews'}`,
-      `${counts.feedback} ${counts.feedback === 1 ? 'feedback to approve' : 'feedbacks to approve'}`,
-    ];
-
-    return summary.join(' • ');
   });
 
   protected readonly visibleItems = computed(() => {
-    const query = this.searchTerm().trim().toLocaleLowerCase();
     const selectedQueue = this.selectedQueue();
 
-    return this.reviewItems().filter((item) => {
-      const matchesQueue = selectedQueue !== 'upload' && item.category === selectedQueue;
-      const searchableText = [
-        item.organization,
-        item.project,
-        item.id,
-        item.file,
-        ...(item.attachments?.map((attachment) => attachment.name) ?? []),
-      ]
-        .join(' ')
-        .toLocaleLowerCase();
-
-      return matchesQueue && (!query || searchableText.includes(query));
-    });
+    return this.reviewItems().filter(
+      (item) => selectedQueue !== 'upload' && item.category === selectedQueue,
+    );
   });
 
   protected selectQueue(queue: QueueTab): void {
     this.selectedQueue.set(queue);
   }
 
-  protected selectPage(page: PrimaryPage): void {
-    this.activePage.set(page);
+  protected isStepCompleted(step: QueueTab): boolean {
+    const stepOrder: QueueTab[] = ['upload', 'review', 'feedback'];
+    return stepOrder.indexOf(step) < stepOrder.indexOf(this.selectedQueue());
   }
 
-  protected onSearch(event: Event): void {
-    if (event.target instanceof HTMLInputElement) {
-      this.searchTerm.set(event.target.value);
-    }
+  protected selectPage(page: PrimaryPage): void {
+    this.activePage.set(page);
   }
 
   protected onFileSelected(event: Event, fileSlot: 1 | 2): void {
@@ -182,15 +162,48 @@ export class App implements OnDestroy {
     this.selectedQueue.set('feedback');
 
     try {
+      const formData = new FormData();
+      formData.append('file_1', rda.file, rda.name);
+      const spreadsheet = item.attachments?.find(
+        (attachment) => attachment.role === 'Spreadsheet',
+      );
+      if (spreadsheet) {
+        formData.append('file_2', spreadsheet.file, spreadsheet.name);
+      }
+
+      const mockRda = await firstValueFrom(
+        this.http.post('http://localhost:8000/api/reviews/ingest', formData, {
+          responseType: 'blob',
+        }),
+      );
+      const generatedRdaUrl = URL.createObjectURL(mockRda);
+      this.uploadObjectUrls.push(generatedRdaUrl);
+      this.updateReview(itemId, { generatedRdaUrl });
       const result = await mammoth.convertToHtml({
-        arrayBuffer: await rda.file.arrayBuffer(),
+        arrayBuffer: await mockRda.arrayBuffer(),
       });
       if (!result.value.trim()) {
         throw new Error('The document contains no previewable text.');
       }
-      this.updateReview(itemId, { docxPreviewHtml: result.value });
+      let comments: DocxComment[] = [];
+      let commentError: string | undefined;
+      try {
+        comments = await extractDocxComments(mockRda);
+      } catch (error: unknown) {
+        const reason = error instanceof Error ? ` ${error.message}` : '';
+        commentError = `Could not display DOCX comments.${reason}`;
+      }
+      this.updateReview(itemId, {
+        docxPreviewHtml: result.value,
+        comments,
+        commentError,
+      });
     } catch (error: unknown) {
-      const reason = error instanceof Error ? ` ${error.message}` : '';
+      const reason = error instanceof HttpErrorResponse
+        ? ` Request failed (${error.status}): ${error.message}`
+        : error instanceof Error
+          ? ` ${error.message}`
+          : ' An unknown error occurred.';
       this.updateReview(itemId, {
         previewError: `Could not display the DOCX preview.${reason}`,
       });
