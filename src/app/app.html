@@ -47,6 +47,7 @@
             <button
               class="workflow-step-button"
               type="button"
+              [disabled]="!canSelectQueue(filter.key)"
               [id]="'workflow-step-' + filter.key"
               [class.active]="selectedQueue() === filter.key"
               [attr.aria-current]="selectedQueue() === filter.key ? 'step' : null"

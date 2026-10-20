@@ -79,7 +79,23 @@ export class App implements OnDestroy {
   });
 
   protected selectQueue(queue: QueueTab): void {
+    if (!this.canSelectQueue(queue)) {
+      return;
+    }
     this.selectedQueue.set(queue);
+  }
+
+  protected canSelectQueue(queue: QueueTab): boolean {
+    if (queue === 'upload') {
+      return true;
+    }
+
+    const items = this.reviewItems();
+    if (queue === 'review') {
+      return items.some((item) => item.category === 'review' || item.reviewStarted);
+    }
+
+    return items.some((item) => item.reviewStarted);
   }
 
   protected isStepCompleted(step: QueueTab): boolean {

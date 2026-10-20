@@ -457,6 +457,20 @@ h1 {
   color: #394a62;
 }
 
+.workflow-step-button:disabled {
+  cursor: not-allowed;
+}
+
+.workflow-step-button:disabled .workflow-step-indicator {
+  border-color: #e1e6ed;
+  background: #f5f7fa;
+  color: #b0bac7;
+}
+
+.workflow-step-button:disabled .workflow-step-label {
+  color: #aab3bf;
+}
+
 .workflow-step-button.active {
   color: #255fcb;
 }

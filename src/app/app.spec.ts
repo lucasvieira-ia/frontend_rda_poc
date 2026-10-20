@@ -87,36 +87,19 @@ describe('App', () => {
     expect(tabs[0].getAttribute('aria-selected')).toBe('true');
   });
 
-  it('should switch from uploads to the selected review queue', async () => {
+  it('should prevent navigating to workflow steps before their required action', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const workflowSteps = compiled.querySelectorAll<HTMLButtonElement>('.workflow-step-button');
 
+    expect(workflowSteps[1].disabled).toBe(true);
+    expect(workflowSteps[2].disabled).toBe(true);
     workflowSteps[1].click();
     fixture.detectChanges();
-    expect(compiled.querySelector('.upload-section')).toBeNull();
-    expect(workflowSteps[1].getAttribute('aria-current')).toBe('step');
-    expect(workflowSteps[0].closest('.workflow-step')?.classList.contains('completed'))
-      .toBe(true);
-    expect(workflowSteps[0].querySelector('.workflow-step-indicator')?.textContent?.trim())
-      .toBe('✓');
-    expect(workflowSteps[2].querySelector('.workflow-step-indicator')?.textContent?.trim())
-      .toBe('');
-
-    workflowSteps[2].click();
-    fixture.detectChanges();
-
-    expect(compiled.querySelector('#queue-panel')).not.toBeNull();
-    expect(workflowSteps[2].getAttribute('aria-current')).toBe('step');
-    expect(workflowSteps[0].closest('.workflow-step')?.classList.contains('completed'))
-      .toBe(true);
-    expect(workflowSteps[1].closest('.workflow-step')?.classList.contains('completed'))
-      .toBe(true);
-    expect(compiled.querySelectorAll('.review-card').length).toBe(0);
-    expect(compiled.querySelector('.empty-state h2')?.textContent)
-      .toContain('No matching reviews');
+    expect(compiled.querySelector('.upload-section')).not.toBeNull();
+    expect(workflowSteps[0].getAttribute('aria-current')).toBe('step');
   });
 
   it('should provide spreadsheet and backend-generated RDA downloads in feedback', async () => {
@@ -147,12 +130,19 @@ describe('App', () => {
 
     fixture.nativeElement.querySelector<HTMLButtonElement>('.finalize-upload').click();
     fixture.detectChanges();
+    const workflowSteps = fixture.nativeElement.querySelectorAll<HTMLButtonElement>(
+      '.workflow-step-button',
+    );
+    expect(workflowSteps[1].disabled).toBe(false);
+    expect(workflowSteps[2].disabled).toBe(true);
     expect(fixture.nativeElement.querySelector<HTMLAnchorElement>('a[download="RDA.docx"]'))
       .not.toBeNull();
     expect(fixture.nativeElement.querySelector<HTMLAnchorElement>(
       'a[download="spreadsheet.xls"]',
     )).not.toBeNull();
     fixture.nativeElement.querySelector<HTMLButtonElement>('.start-review').click();
+    fixture.detectChanges();
+    expect(workflowSteps[2].disabled).toBe(false);
 
     const request = TestBed.inject(HttpTestingController).expectOne(
       'http://localhost:8000/api/reviews/ingest',
@@ -165,9 +155,6 @@ describe('App', () => {
     request.flush(multipartResponse.body, { headers: multipartResponse.headers });
     await fixture.whenStable();
     fixture.detectChanges();
-    const workflowSteps = fixture.nativeElement.querySelectorAll<HTMLButtonElement>(
-      '.workflow-step-button',
-    );
     expect(workflowSteps[2].getAttribute('aria-current')).toBe('step');
     expect(fixture.nativeElement.querySelector('.start-review')?.textContent)
       .toContain('Review started');
