@@ -9,7 +9,7 @@ import { Component } from '@angular/core';
         <span class="brand-mark" aria-hidden="true">R</span>
         <span class="brand-name">rda<span>review</span></span>
       </a>
-      <span class="header-context">DOCUMENT WORKSPACE</span>
+      
     </header>
   `,
   styleUrl: './rda-header.component.scss',
