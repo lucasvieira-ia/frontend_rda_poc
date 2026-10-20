@@ -11,8 +11,62 @@
     #f7f9fc;
 }
 
+.app-layout {
+  display: grid;
+  min-height: calc(100vh - 72px);
+  grid-template-columns: 168px minmax(0, 1fr);
+}
+
+.side-navigation {
+  border-right: 1px solid #e1e6ed;
+  background: #fff;
+}
+
+.side-navigation nav {
+  display: grid;
+  gap: 3px;
+  padding: 4px;
+}
+
+.navigation-tab {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 9px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #43536a;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.navigation-tab svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.4;
+}
+
+.navigation-tab:hover {
+  background: #f4f7fa;
+}
+
+.navigation-tab.active {
+  border-left: 2px solid #1683d8;
+  background: #eaf1f6;
+  color: #24364d;
+}
+
 .page-content {
-  width: min(100% - 48px, 920px);
+  width: min(100% - 48px, 1040px);
   margin: 0 auto;
   padding: 42px 0 24px;
 }
@@ -52,6 +106,14 @@
   color: #7f8b9d;
   font-size: 13px;
   line-height: 1.55;
+}
+
+.skills-placeholder {
+  min-height: 220px;
+  padding: 28px;
+  border: 1px solid #e6ebf2;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 88%);
 }
 
 .workflow-card {
@@ -305,6 +367,10 @@ app-rda-stepper {
 }
 
 @media (max-width: 760px) {
+  .app-layout {
+    grid-template-columns: 150px minmax(0, 1fr);
+  }
+
   .page-content {
     padding-top: 30px;
   }
@@ -315,14 +381,28 @@ app-rda-stepper {
 }
 
 @media (max-width: 520px) {
-  .page-content {
-    width: calc(100% - 32px);
+  .app-layout {
+    display: block;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .analysis-loading-spinner {
-      animation-duration: 1800ms;
-    }
+  .side-navigation {
+    border-right: 0;
+    border-bottom: 1px solid #e1e6ed;
+  }
+
+  .side-navigation nav {
+    display: flex;
+    gap: 4px;
+    padding: 5px 16px;
+  }
+
+  .navigation-tab {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+
+  .page-content {
+    width: calc(100% - 32px);
   }
 
   .page-intro h1 {
@@ -355,5 +435,11 @@ app-rda-stepper {
   .page-footer {
     gap: 8px;
     flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .analysis-loading-spinner {
+    animation-duration: 1800ms;
   }
 }

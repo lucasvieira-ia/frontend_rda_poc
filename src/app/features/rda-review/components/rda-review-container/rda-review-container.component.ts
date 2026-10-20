@@ -29,6 +29,7 @@ export class RdaReviewContainerComponent implements OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly generatedObjectUrls: string[] = [];
 
+  protected readonly activeNavigationTab = signal<'analysis' | 'skills'>('analysis');
   protected readonly activeStep = signal<RdaStepId>('preparation');
   protected readonly minutaFile = signal<UploadedFile | null>(null);
   protected readonly planilhaFile = signal<UploadedFile | null>(null);
@@ -91,6 +92,10 @@ export class RdaReviewContainerComponent implements OnDestroy {
     if (step === 'preparation' || this.activeStep() === 'analysis') {
       this.activeStep.set(step);
     }
+  }
+
+  protected selectNavigationTab(tab: 'analysis' | 'skills'): void {
+    this.activeNavigationTab.set(tab);
   }
 
   protected async onSubmit(): Promise<void> {

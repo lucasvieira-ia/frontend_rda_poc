@@ -49,6 +49,9 @@ describe('RdaReviewContainer', () => {
     const steps = compiled.querySelectorAll<HTMLButtonElement>('.step-button');
 
     expect(compiled.querySelector('app-rda-header')).not.toBeNull();
+    expect(compiled.querySelector('.navigation-tab[aria-current="page"]')?.textContent)
+      .toContain('Analysis');
+    expect(compiled.querySelectorAll('.navigation-tab')).toHaveLength(2);
     expect(compiled.querySelector('app-rda-preparation-step')).not.toBeNull();
     expect(steps).toHaveLength(2);
     expect(steps[0].textContent).toContain('Preparation');
@@ -56,6 +59,26 @@ describe('RdaReviewContainer', () => {
     expect(steps[1].disabled).toBe(true);
     expect(compiled.querySelector<HTMLButtonElement>('.submit-button')?.disabled).toBe(true);
     expect(compiled.querySelectorAll('.required-badge')).toHaveLength(2);
+  });
+
+  it('switches between the Analysis and AI Skills navigation tabs', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const skillsTab = Array.from(compiled.querySelectorAll<HTMLButtonElement>('.navigation-tab'))
+      .find((tab) => tab.textContent?.includes('AI Skills'));
+    skillsTab?.click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('.skills-placeholder h1')?.textContent).toContain('AI Skills');
+    expect(compiled.querySelector('.navigation-tab[aria-current="page"]')?.textContent)
+      .toContain('AI Skills');
+
+    compiled.querySelector<HTMLButtonElement>('.navigation-tab')?.click();
+    fixture.detectChanges();
+    expect(compiled.querySelector('app-rda-preparation-step')).not.toBeNull();
   });
 
   it('validates file extensions and accepts RDA and spreadsheet files', async () => {
