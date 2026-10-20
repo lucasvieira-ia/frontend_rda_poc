@@ -63,7 +63,7 @@ export class RdaReviewContainerComponent implements OnDestroy {
       label: 'Preparation',
       description: 'Upload your documents',
       isActive: this.activeStep() === 'preparation',
-      isCompleted: this.activeStep() === 'analysis' && !this.isSubmitting(),
+      isCompleted: this.activeStep() === 'analysis',
     },
     {
       id: 'analysis',

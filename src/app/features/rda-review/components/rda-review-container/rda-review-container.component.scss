@@ -66,9 +66,9 @@
 }
 
 .page-content {
-  width: min(100% - 48px, 1040px);
-  margin: 0 auto;
-  padding: 42px 0 24px;
+  width: 100%;
+  margin: 0;
+  padding: 42px 16px 24px;
 }
 
 .page-intro {
@@ -402,7 +402,7 @@ app-rda-stepper {
   }
 
   .page-content {
-    width: calc(100% - 32px);
+    padding: 30px 16px 24px;
   }
 
   .page-intro h1 {

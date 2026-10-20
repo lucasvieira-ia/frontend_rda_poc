@@ -3,11 +3,7 @@
 }
 
 .preparation-step {
-  padding: 28px;
-  border: 1px solid #e5eaf1;
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 8px 28px rgb(28 48 78 / 4%);
+  padding: 0;
 }
 
 .section-heading {
@@ -54,20 +50,12 @@
 }
 
 @media (max-width: 760px) {
-  .preparation-step {
-    padding: 20px;
-  }
-
   .upload-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 520px) {
-  .preparation-step {
-    padding: 16px;
-  }
-
   .section-heading h2 {
     font-size: 18px;
   }

@@ -168,6 +168,7 @@ describe('RdaReviewContainer', () => {
     expect(compiled.querySelector('.analysis-loading')?.textContent)
       .toContain('Your files are being analyzed');
     expect(compiled.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(compiled.querySelector('.step-item.completed .step-connector')).not.toBeNull();
 
     const multipart = createMultipartResponse(true);
     request.flush(multipart.body, { headers: multipart.headers });
