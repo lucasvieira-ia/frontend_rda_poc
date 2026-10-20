@@ -92,12 +92,12 @@
         </label>
 
         <label class="upload-field">
-          <span class="upload-field-label">Spreadsheet (.XLSX)</span>
+          <span class="upload-field-label">Spreadsheet (.XLS / .XLSX)</span>
           <span class="file-picker">
             <input
               class="file-picker-input"
               type="file"
-              accept=".xlsx"
+              accept=".xls,.xlsx"
               aria-label="Choose the optional spreadsheet"
               (change)="onFileSelected($event, 2)"
             />
@@ -109,7 +109,7 @@
         </label>
       </div>
       <div class="upload-actions">
-        <span><b>A spreadsheet is optional.*</b></span>
+        
         <button
           class="finalize-upload"
           type="button"
@@ -129,63 +129,34 @@
       @for (item of visibleItems(); track item.id) {
         <article class="review-card" [class.review-card-feedback]="item.reviewStarted">
           @if (item.reviewStarted) {
-            <section class="document-preview" aria-label="Backend-generated RDA preview">
-              @if (item.generatedRdaUrl) {
-                <div class="generated-rda-heading">
-                  <h2>RDA with Comments</h2>
+            <section class="feedback-downloads" aria-label="Feedback files">
+              <h2>Files for feedback</h2>
+              <div class="feedback-download-list">
+                @if (item.spreadsheetName) {
+                  @if (item.spreadsheetUrl) {
+                    <a
+                      class="feedback-download"
+                      [href]="item.spreadsheetUrl"
+                      [download]="item.spreadsheetName"
+                    >
+                      Download spreadsheet: {{ item.spreadsheetName }}
+                    </a>
+                  }
+                }
+                @if (item.generatedRdaUrl) {
                   <a
-                    class="generated-rda-download"
+                    class="feedback-download"
                     [href]="item.generatedRdaUrl"
                     download="Mock_RDA.docx"
                   >
                     Download generated RDA
                   </a>
-                </div>
-              }
-              @if (item.preparingPreview) {
-                <p>Preparing the generated RDA preview...</p>
-              } @else if (item.previewError; as previewError) {
-                <p class="preview-error" role="alert">{{ previewError }}</p>
-              } @else if (item.docxPreviewHtml) {
-                @if (item.commentError; as commentError) {
-                  <p class="preview-error" role="alert">{{ commentError }}</p>
                 }
-                <div class="docx-preview-viewport">
-                  <div class="docx-preview" [innerHTML]="item.docxPreviewHtml"></div>
-                </div>
-                <section class="document-comments" aria-label="RDA comments">
-                  <h3>Comments ({{ item.comments?.length ?? 0 }})</h3>
-                  @if (item.comments?.length) {
-                    <ol class="document-comment-list">
-                      @for (comment of item.comments; track comment.id) {
-                        <li class="document-comment">
-                          <div class="document-comment-heading">
-                            <span
-                              class="document-comment-severity"
-                              [class.document-comment-severity-error]="comment.severity === 'error'"
-                              [class.document-comment-severity-warning]="comment.severity === 'warning'"
-                            >
-                              {{
-                                comment.severity === 'error'
-                                  ? 'Error'
-                                  : comment.severity === 'warning'
-                                    ? 'Warning'
-                                    : 'Comment'
-                              }}
-                            </span>
-                            <span class="document-comment-author">{{ comment.author }}</span>
-                          </div>
-                          @if (comment.quote) {
-                            <blockquote>{{ comment.quote }}</blockquote>
-                          }
-                          <p>{{ comment.text }}</p>
-                        </li>
-                      }
-                    </ol>
-                  } @else {
-                    <p>No comments were found in this document.</p>
-                  }
-                </section>
+              </div>
+              @if (item.generatingFiles) {
+                <p>Generating the downloadable files...</p>
+              } @else if (item.generationError; as generationError) {
+                <p class="generation-error" role="alert">{{ generationError }}</p>
               }
             </section>
           } @else {
@@ -279,12 +250,12 @@
             <button
               class="start-review"
               type="button"
-              [disabled]="item.preparingPreview || item.reviewStarted"
+              [disabled]="item.generatingFiles || item.reviewStarted"
               (click)="startReview(item.id)"
             >
               {{
-                item.preparingPreview
-                  ? 'Preparing RDA...'
+                item.generatingFiles
+                  ? 'Generating files...'
                   : item.reviewStarted
                     ? 'Review started'
                     : 'Start Review'

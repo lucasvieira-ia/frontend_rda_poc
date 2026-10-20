@@ -1,8 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
-import * as mammoth from 'mammoth';
 import { firstValueFrom } from 'rxjs';
-import { DocxComment, extractDocxComments } from './docx-comments';
 
 type QueueCategory = 'review' | 'feedback';
 type QueueTab = 'upload' | QueueCategory;
@@ -40,12 +38,11 @@ interface ReviewItem {
   metrics: ReviewMetric[];
   attachments?: ReviewAttachment[];
   reviewStarted?: boolean;
-  preparingPreview?: boolean;
-  docxPreviewHtml?: string;
+  generatingFiles?: boolean;
   generatedRdaUrl?: string;
-  comments?: DocxComment[];
-  previewError?: string;
-  commentError?: string;
+  generationError?: string;
+  spreadsheetName?: string;
+  spreadsheetUrl?: string;
 }
 
 @Component({
@@ -64,23 +61,6 @@ export class App implements OnDestroy {
 
   private readonly reviewItems = signal<ReviewItem[]>([]);
   private readonly uploadObjectUrls: string[] = [];
-
-  protected readonly queueCounts = computed(() => {
-    const counts: Record<QueueCategory, number> = {
-      review: 0,
-      feedback: 0,
-    };
-
-    for (const item of this.reviewItems()) {
-      counts[item.category] += 1;
-    }
-
-    return counts;
-  });
-
-  protected readonly totalQueueCount = computed(() =>
-    Object.values(this.queueCounts()).reduce((total, count) => total + count, 0),
-  );
 
   protected readonly queueFilters = computed<QueueFilter[]>(() => {
     return [
@@ -149,6 +129,9 @@ export class App implements OnDestroy {
   protected async startReview(itemId: string): Promise<void> {
     const item = this.reviewItems().find((review) => review.id === itemId);
     const rda = item?.attachments?.find((attachment) => attachment.role === 'RDA');
+    const spreadsheet = item?.attachments?.find(
+      (attachment) => attachment.role === 'Spreadsheet',
+    );
 
     if (!item || !rda || item.reviewStarted) {
       return;
@@ -156,60 +139,92 @@ export class App implements OnDestroy {
 
     this.reviewItems.update((items) => items.map((review) =>
       review.id === itemId
-        ? { ...review, category: 'feedback', reviewStarted: true, preparingPreview: true }
+        ? {
+            ...review,
+            category: 'feedback',
+            reviewStarted: true,
+            generatingFiles: true,
+            spreadsheetName: spreadsheet?.name,
+          }
         : review,
     ));
     this.selectedQueue.set('feedback');
 
+    await this.requestReviewFiles(itemId, rda, spreadsheet);
+  }
+
+  private async requestReviewFiles(
+    itemId: string,
+    rda: ReviewAttachment,
+    spreadsheet?: ReviewAttachment,
+  ): Promise<void> {
     try {
       const formData = new FormData();
       formData.append('file_1', rda.file, rda.name);
-      const spreadsheet = item.attachments?.find(
-        (attachment) => attachment.role === 'Spreadsheet',
-      );
       if (spreadsheet) {
         formData.append('file_2', spreadsheet.file, spreadsheet.name);
       }
-
-      const mockRda = await firstValueFrom(
+      const response = await firstValueFrom(
         this.http.post('http://localhost:8000/api/reviews/ingest', formData, {
+          observe: 'response',
           responseType: 'blob',
         }),
       );
-      const generatedRdaUrl = URL.createObjectURL(mockRda);
+      if (!response.body) {
+        throw new Error('The API response did not contain downloadable files.');
+      }
+      const contentType = response.headers.get('Content-Type');
+      if (!contentType?.toLocaleLowerCase().startsWith('multipart/form-data;')) {
+        throw new Error('The API response was not multipart/form-data.');
+      }
+      const multipartResponse = new Response(response.body, {
+        headers: { 'Content-Type': contentType },
+      });
+      const files = await multipartResponse.formData();
+      const rdaFile = files.get('rda');
+      if (!(rdaFile instanceof Blob)) {
+        throw new Error('The API response does not contain the RDA file part.');
+      }
+      let spreadsheetFile: Blob | null = null;
+      if (spreadsheet) {
+        const returnedSpreadsheet = files.get('spreadsheet');
+        if (!(returnedSpreadsheet instanceof Blob)) {
+          throw new Error('The API response does not contain the spreadsheet file part.');
+        }
+        spreadsheetFile = returnedSpreadsheet;
+      }
+      const generatedRdaUrl = URL.createObjectURL(
+        new Blob([rdaFile], {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        }),
+      );
       this.uploadObjectUrls.push(generatedRdaUrl);
-      this.updateReview(itemId, { generatedRdaUrl });
-      const result = await mammoth.convertToHtml({
-        arrayBuffer: await mockRda.arrayBuffer(),
-      });
-      if (!result.value.trim()) {
-        throw new Error('The document contains no previewable text.');
+      const changes: Partial<ReviewItem> = { generatedRdaUrl };
+      if (spreadsheet && spreadsheetFile) {
+        const spreadsheetUrl = URL.createObjectURL(
+          new Blob([spreadsheetFile], { type: spreadsheet.file.type }),
+        );
+        this.uploadObjectUrls.push(spreadsheetUrl);
+        changes.spreadsheetUrl = spreadsheetUrl;
       }
-      let comments: DocxComment[] = [];
-      let commentError: string | undefined;
-      try {
-        comments = await extractDocxComments(mockRda);
-      } catch (error: unknown) {
-        const reason = error instanceof Error ? ` ${error.message}` : '';
-        commentError = `Could not display DOCX comments.${reason}`;
-      }
-      this.updateReview(itemId, {
-        docxPreviewHtml: result.value,
-        comments,
-        commentError,
-      });
+      this.updateReview(itemId, changes);
     } catch (error: unknown) {
-      const reason = error instanceof HttpErrorResponse
-        ? ` Request failed (${error.status}): ${error.message}`
-        : error instanceof Error
-          ? ` ${error.message}`
-          : ' An unknown error occurred.';
       this.updateReview(itemId, {
-        previewError: `Could not display the DOCX preview.${reason}`,
+        generationError: `Could not generate the RDA.${this.errorReason(error)}`,
       });
     } finally {
-      this.updateReview(itemId, { preparingPreview: false });
+      this.updateReview(itemId, { generatingFiles: false });
     }
+  }
+
+  private errorReason(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      return ` Request failed (${error.status}): ${error.message}`;
+    }
+    if (error instanceof Error) {
+      return ` ${error.message}`;
+    }
+    return ' An unknown error occurred.';
   }
 
   private updateReview(itemId: string, changes: Partial<ReviewItem>): void {

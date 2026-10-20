@@ -1,22 +1,30 @@
 import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import * as mammoth from 'mammoth';
-import JSZip from 'jszip';
+import { HttpHeaders } from '@angular/common/http';
 import { vi } from 'vitest';
 import { App } from './app';
 
-async function createMockDocxResponse(): Promise<Blob> {
-  const archive = new JSZip();
-  archive.file(
-    'word/document.xml',
-    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:commentRangeStart w:id="0"/><w:r><w:t>Important passage</w:t></w:r><w:r><w:t xml:space="preserve"> here</w:t></w:r><w:commentRangeEnd w:id="0"/></w:p><w:p><w:commentRangeStart w:id="1"/><w:r><w:t>Second passage</w:t></w:r><w:commentRangeEnd w:id="1"/></w:p></w:body></w:document>',
-  );
-  archive.file(
-    'word/comments.xml',
-    '<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0" w:author="RDA Reviewer"><w:p><w:r><w:t>[ERRO] Please revise this section.</w:t></w:r></w:p></w:comment><w:comment w:id="1" w:author="RDA Reviewer"><w:p><w:r><w:t>[AVISO] Check this passage.</w:t></w:r></w:p></w:comment></w:comments>',
-  );
-  return archive.generateAsync({ type: 'blob' });
+function createMultipartResponse(includeSpreadsheet: boolean): {
+  body: Blob;
+  headers: HttpHeaders;
+} {
+  const boundary = 'test-boundary';
+  const parts = [
+    `--${boundary}\r\nContent-Disposition: form-data; name="rda"; filename="Mock_RDA.docx"\r\nContent-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\n\r\ngenerated RDA\r\n`,
+  ];
+  if (includeSpreadsheet) {
+    parts.push(
+      `--${boundary}\r\nContent-Disposition: form-data; name="spreadsheet"; filename="spreadsheet.xls"\r\nContent-Type: application/vnd.ms-excel\r\n\r\nreturned spreadsheet\r\n`,
+    );
+  }
+  parts.push(`--${boundary}--\r\n`);
+  return {
+    body: new Blob(parts, { type: `multipart/form-data; boundary=${boundary}` }),
+    headers: new HttpHeaders({
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+    }),
+  };
 }
 
 describe('App', () => {
@@ -52,6 +60,10 @@ describe('App', () => {
     expect(workflowSteps[1].textContent).toContain('To review');
     expect(workflowSteps[2].textContent).toContain('Feedbacks');
     expect(workflowSteps[0].getAttribute('aria-current')).toBe('step');
+    const spreadsheetInput = compiled.querySelector<HTMLInputElement>(
+      'input[type="file"][aria-label="Choose the optional spreadsheet"]',
+    );
+    expect(spreadsheetInput?.accept).toBe('.xls,.xlsx');
     expect(compiled.querySelector('.upload-section')).not.toBeNull();
     expect(compiled.querySelectorAll('.review-card').length).toBe(0);
   });
@@ -107,15 +119,15 @@ describe('App', () => {
       .toContain('No matching reviews');
   });
 
-  it('should send uploaded files and preview the DOCX returned by the backend', async () => {
+  it('should provide spreadsheet and backend-generated RDA downloads in feedback', async () => {
     const fixture = TestBed.createComponent(App);
     vi.stubGlobal('URL', {
-      createObjectURL: vi.fn().mockReturnValue('blob:generated-rda'),
+      createObjectURL: vi.fn((blob: Blob) =>
+        blob.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          ? 'blob:generated-rda'
+          : 'blob:returned-spreadsheet',
+      ),
       revokeObjectURL: vi.fn(),
-    });
-    vi.spyOn(mammoth, 'convertToHtml').mockResolvedValue({
-      value: '<p>Important passage here</p><p>Second passage</p>',
-      messages: [],
     });
     await fixture.whenStable();
     fixture.detectChanges();
@@ -123,8 +135,8 @@ describe('App', () => {
     const firstFile = new File(['docx data'], 'RDA.docx', {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     });
-    const secondFile = new File(['spreadsheet data'], 'spreadsheet.xlsx', {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    const secondFile = new File(['spreadsheet data'], 'spreadsheet.xls', {
+      type: 'application/vnd.ms-excel',
     });
     const fileInputs = fixture.nativeElement.querySelectorAll('input[type="file"]');
 
@@ -138,7 +150,7 @@ describe('App', () => {
     expect(fixture.nativeElement.querySelector<HTMLAnchorElement>('a[download="RDA.docx"]'))
       .not.toBeNull();
     expect(fixture.nativeElement.querySelector<HTMLAnchorElement>(
-      'a[download="spreadsheet.xlsx"]',
+      'a[download="spreadsheet.xls"]',
     )).not.toBeNull();
     fixture.nativeElement.querySelector<HTMLButtonElement>('.start-review').click();
 
@@ -148,8 +160,9 @@ describe('App', () => {
     expect(request.request.method).toBe('POST');
     expect(((request.request.body as FormData).get('file_1') as File).name).toBe('RDA.docx');
     expect(((request.request.body as FormData).get('file_2') as File).name)
-      .toBe('spreadsheet.xlsx');
-    request.flush(await createMockDocxResponse());
+      .toBe('spreadsheet.xls');
+    const multipartResponse = createMultipartResponse(true);
+    request.flush(multipartResponse.body, { headers: multipartResponse.headers });
     await fixture.whenStable();
     fixture.detectChanges();
     const workflowSteps = fixture.nativeElement.querySelectorAll<HTMLButtonElement>(
@@ -158,30 +171,26 @@ describe('App', () => {
     expect(workflowSteps[2].getAttribute('aria-current')).toBe('step');
     expect(fixture.nativeElement.querySelector('.start-review')?.textContent)
       .toContain('Review started');
-    expect(fixture.nativeElement.querySelector('.docx-preview')?.textContent)
-      .toContain('Important passage here');
-    expect(fixture.nativeElement.querySelector('.docx-comment-balloon')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.document-comments')?.textContent)
-      .toContain('Please revise this section.');
-    expect(fixture.nativeElement.querySelector('.document-comments blockquote')?.textContent)
-      .toContain('Important passage here');
     const generatedRda = fixture.nativeElement.querySelector<HTMLAnchorElement>(
-      'a[download="Mock_RDA.docx"]',
+      '.feedback-download[download="Mock_RDA.docx"]',
     );
     expect(generatedRda?.getAttribute('href')).toBe('blob:generated-rda');
+    const spreadsheet = fixture.nativeElement.querySelector<HTMLAnchorElement>(
+      '.feedback-download[download="spreadsheet.xls"]',
+    );
+    expect(spreadsheet?.textContent).toContain('Download spreadsheet');
+    expect(spreadsheet?.getAttribute('href')).toBe('blob:returned-spreadsheet');
+    expect(fixture.nativeElement.querySelector('.docx-preview')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.document-comments')).toBeNull();
     expect(fixture.nativeElement.querySelector('.review-file-list')).toBeNull();
     expect(fixture.nativeElement.querySelector('.metrics-column')).toBeNull();
   });
 
-  it('should submit an RDA-only review and show the returned DOCX', async () => {
+  it('should provide only the generated RDA download when no spreadsheet was uploaded', async () => {
     const fixture = TestBed.createComponent(App);
     vi.stubGlobal('URL', {
       createObjectURL: vi.fn().mockReturnValue('blob:generated-rda'),
       revokeObjectURL: vi.fn(),
-    });
-    vi.spyOn(mammoth, 'convertToHtml').mockResolvedValue({
-      value: '<p>Important passage here</p><p>Second passage</p>',
-      messages: [],
     });
     await fixture.whenStable();
     fixture.detectChanges();
@@ -209,14 +218,14 @@ describe('App', () => {
     );
     expect(((request.request.body as FormData).get('file_1') as File).name).toBe('RDA.docx');
     expect((request.request.body as FormData).has('file_2')).toBe(false);
-    request.flush(await createMockDocxResponse());
+    const multipartResponse = createMultipartResponse(false);
+    request.flush(multipartResponse.body, { headers: multipartResponse.headers });
     await fixture.whenStable();
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.docx-preview')?.textContent)
-      .toContain('Important passage here');
-    expect(fixture.nativeElement.querySelector('.docx-comment-balloon'))
-      .not.toBeNull();
-    expect(fixture.nativeElement.querySelector('.generated-rda-download')?.textContent)
+    expect(fixture.nativeElement.querySelector('.feedback-download[download="spreadsheet.xlsx"]'))
+      .toBeNull();
+    expect(fixture.nativeElement.querySelector('.feedback-download[download="Mock_RDA.docx"]')
+      ?.textContent)
       .toContain('Download generated RDA');
     expect(fixture.nativeElement.querySelector('.review-file-list')).toBeNull();
   });
