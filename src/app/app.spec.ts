@@ -141,12 +141,18 @@ describe('RdaReviewContainer', () => {
     expect((formData.get('file_1') as File).name).toBe('RDA.docx');
     expect((formData.get('file_2') as File).name).toBe('costs.xlsx');
 
+    fixture.detectChanges();
+    expect(compiled.querySelector('.analysis-loading')?.textContent)
+      .toContain('Your files are being analyzed');
+    expect(compiled.querySelector('[aria-busy="true"]')).not.toBeNull();
+
     const multipart = createMultipartResponse(true);
     request.flush(multipart.body, { headers: multipart.headers });
     await fixture.whenStable();
     fixture.detectChanges();
 
     expect(compiled.querySelector('.analysis-step')).not.toBeNull();
+    expect(compiled.querySelector('.analysis-loading')).toBeNull();
     expect(compiled.querySelector<HTMLAnchorElement>(
       'a[download="Mock_RDA.docx"]',
     )?.getAttribute('href')).toBe('blob:result-1');

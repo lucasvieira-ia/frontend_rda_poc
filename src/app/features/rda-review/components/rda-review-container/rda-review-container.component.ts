@@ -62,7 +62,7 @@ export class RdaReviewContainerComponent implements OnDestroy {
       label: 'Preparation',
       description: 'Upload your documents',
       isActive: this.activeStep() === 'preparation',
-      isCompleted: this.activeStep() === 'analysis',
+      isCompleted: this.activeStep() === 'analysis' && !this.isSubmitting(),
     },
     {
       id: 'analysis',
@@ -106,6 +106,7 @@ export class RdaReviewContainerComponent implements OnDestroy {
     }
 
     this.isSubmitting.set(true);
+    this.activeStep.set('analysis');
     this.submitError.set(null);
     this.revokeGeneratedFiles();
     this.generatedRdaUrl.set(null);
@@ -164,6 +165,7 @@ export class RdaReviewContainerComponent implements OnDestroy {
       this.activeStep.set('analysis');
     } catch (error: unknown) {
       this.submitError.set(`Could not submit the documents.${this.errorReason(error)}`);
+      this.activeStep.set('preparation');
     } finally {
       this.isSubmitting.set(false);
     }

@@ -89,6 +89,29 @@ app-rda-stepper {
   color: #2d9463;
 }
 
+.analysis-loading {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  padding: 12px 0 18px;
+}
+
+.analysis-loading-spinner {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 16px;
+  border: 3px solid #dce7f7;
+  border-top-color: #3972d4;
+  border-radius: 50%;
+  animation: analysis-spin 800ms linear infinite;
+}
+
+@keyframes analysis-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .analysis-success-icon svg {
   width: 25px;
   height: 25px;
@@ -294,6 +317,12 @@ app-rda-stepper {
 @media (max-width: 520px) {
   .page-content {
     width: calc(100% - 32px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .analysis-loading-spinner {
+      animation-duration: 1800ms;
+    }
   }
 
   .page-intro h1 {
