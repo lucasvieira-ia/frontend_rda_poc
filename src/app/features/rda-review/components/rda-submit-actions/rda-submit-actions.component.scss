@@ -1,0 +1,83 @@
+:host {
+  display: block;
+}
+
+.submit-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.required-note {
+  color: #7e8999;
+  font-size: 11px;
+}
+
+.required-note span {
+  color: #c65343;
+  font-weight: 800;
+}
+
+.submit-button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 7px;
+  background: #2868df;
+  box-shadow: 0 3px 8px rgb(37 99 235 / 18%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 140ms ease, opacity 140ms ease;
+}
+
+.submit-button:hover:not(:disabled) {
+  background: #1f58c7;
+}
+
+.submit-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.submit-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.button-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgb(255 255 255 / 45%);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 520px) {
+  .submit-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .submit-button {
+    width: 100%;
+  }
+}

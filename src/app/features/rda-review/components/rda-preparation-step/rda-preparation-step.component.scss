@@ -1,0 +1,74 @@
+:host {
+  display: block;
+}
+
+.preparation-step {
+  padding: 28px;
+  border: 1px solid #e5eaf1;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgb(28 48 78 / 4%);
+}
+
+.section-heading {
+  margin-bottom: 22px;
+}
+
+.section-eyebrow {
+  color: #3972d4;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.section-heading h2 {
+  margin-top: 8px;
+  color: #243650;
+  font-size: 20px;
+  font-weight: 720;
+  letter-spacing: -0.5px;
+}
+
+.section-heading p {
+  margin-top: 7px;
+  color: #7f8b9d;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.upload-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.submit-error {
+  margin-top: 16px;
+  padding: 11px 13px;
+  border: 1px solid #f0cbc7;
+  border-radius: 7px;
+  background: #fff8f7;
+  color: #b42318;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .preparation-step {
+    padding: 20px;
+  }
+
+  .upload-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .preparation-step {
+    padding: 16px;
+  }
+
+  .section-heading h2 {
+    font-size: 18px;
+  }
+}

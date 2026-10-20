@@ -1,8 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
-import { TestBed } from '@angular/core/testing';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { HttpHeaders } from '@angular/common/http';
-import { vi } from 'vitest';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './app';
 
 function createMultipartResponse(includeSpreadsheet: boolean): {
@@ -15,25 +15,24 @@ function createMultipartResponse(includeSpreadsheet: boolean): {
   ];
   if (includeSpreadsheet) {
     parts.push(
-      `--${boundary}\r\nContent-Disposition: form-data; name="spreadsheet"; filename="spreadsheet.xls"\r\nContent-Type: application/vnd.ms-excel\r\n\r\nreturned spreadsheet\r\n`,
+      `--${boundary}\r\nContent-Disposition: form-data; name="spreadsheet"; filename="spreadsheet.xlsx"\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\nreturned spreadsheet\r\n`,
     );
   }
   parts.push(`--${boundary}--\r\n`);
   return {
-    body: new Blob(parts, { type: `multipart/form-data; boundary=${boundary}` }),
+    body: new Blob(parts),
     headers: new HttpHeaders({
       'Content-Type': `multipart/form-data; boundary=${boundary}`,
     }),
   };
 }
 
-describe('App', () => {
+describe('RdaReviewContainer', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [provideHttpClient(), provideHttpClientTesting()],
-    })
-      .compileComponents();
+    }).compileComponents();
   });
 
   afterEach(() => {
@@ -42,180 +41,140 @@ describe('App', () => {
     TestBed.inject(HttpTestingController).verify();
   });
 
-  it('should create the app', () => {
-    const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
-  });
-
-  it('should show Upload documents as the first workflow step by default', async () => {
+  it('starts on Preparation and disables forward navigation until submit', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    const workflowSteps = compiled.querySelectorAll<HTMLButtonElement>('.workflow-step-button');
+    const steps = compiled.querySelectorAll<HTMLButtonElement>('.step-button');
 
-    expect(compiled.querySelector('.primary-tab')?.textContent).toContain('RDAs');
-    expect(workflowSteps[0].textContent).toContain('Upload documents');
-    expect(workflowSteps[1].textContent).toContain('To review');
-    expect(workflowSteps[2].textContent).toContain('Feedbacks');
-    expect(workflowSteps[0].getAttribute('aria-current')).toBe('step');
-    const spreadsheetInput = compiled.querySelector<HTMLInputElement>(
-      'input[type="file"][aria-label="Choose the optional spreadsheet"]',
-    );
-    expect(spreadsheetInput?.accept).toBe('.xls,.xlsx');
-    expect(compiled.querySelector('.upload-section')).not.toBeNull();
-    expect(compiled.querySelectorAll('.review-card').length).toBe(0);
+    expect(compiled.querySelector('app-rda-header')).not.toBeNull();
+    expect(compiled.querySelector('app-rda-preparation-step')).not.toBeNull();
+    expect(steps).toHaveLength(2);
+    expect(steps[0].textContent).toContain('Preparation');
+    expect(steps[1].textContent).toContain('Analysis');
+    expect(steps[1].disabled).toBe(true);
+    expect(compiled.querySelector<HTMLButtonElement>('.submit-button')?.disabled).toBe(true);
+    expect(compiled.querySelectorAll('.required-badge')).toHaveLength(2);
   });
 
-  it('should show the No Skills page and return to the queue', async () => {
+  it('validates file extensions and accepts RDA and spreadsheet files', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    const tabs = compiled.querySelectorAll<HTMLButtonElement>('.primary-tab');
+    const inputs = compiled.querySelectorAll<HTMLInputElement>('input[type="file"]');
 
-    tabs[1].click();
+    const invalidRda = new File(['text'], 'RDA.pdf', { type: 'application/pdf' });
+    Object.defineProperty(inputs[0], 'files', {
+      configurable: true,
+      value: [invalidRda],
+    });
+    inputs[0].dispatchEvent(new Event('change'));
     fixture.detectChanges();
-    expect(compiled.querySelector('#skills-page-title')?.textContent).toContain('No Skills');
-    expect(compiled.querySelector('.upload-section')).toBeNull();
-    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+    expect(compiled.querySelector('.file-error')?.textContent).toContain('.DOCX');
+    expect(compiled.querySelector<HTMLButtonElement>('.submit-button')?.disabled).toBe(true);
 
-    tabs[0].click();
+    const validRda = new File(['docx'], 'RDA.docx');
+    const dropZone = compiled.querySelector('.drop-zone');
+    const dragOver = new Event('dragover', { bubbles: true, cancelable: true });
+    dropZone?.dispatchEvent(dragOver);
     fixture.detectChanges();
-    expect(compiled.querySelector('.upload-section')).not.toBeNull();
-    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    expect(dropZone?.classList.contains('is-dragging')).toBe(true);
+
+    const drop = new Event('drop', { bubbles: true, cancelable: true });
+    Object.defineProperty(drop, 'dataTransfer', {
+      value: { files: { item: (index: number) => index === 0 ? validRda : null } },
+    });
+    dropZone?.dispatchEvent(drop);
+    fixture.detectChanges();
+    expect(compiled.querySelector<HTMLButtonElement>('.submit-button')?.disabled).toBe(true);
+
+    const invalidSpreadsheet = new File(['csv'], 'costs.csv');
+    Object.defineProperty(inputs[1], 'files', {
+      configurable: true,
+      value: [invalidSpreadsheet],
+    });
+    inputs[1].dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(compiled.querySelector<HTMLButtonElement>('.submit-button')?.disabled).toBe(true);
+
+    const spreadsheet = new File(['xlsx'], 'costs.xlsx');
+    Object.defineProperty(inputs[1], 'files', {
+      configurable: true,
+      value: [spreadsheet],
+    });
+    inputs[1].dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(compiled.querySelectorAll('.selected-file-copy strong')[0].textContent)
+      .toContain('RDA.docx');
+    expect(compiled.querySelectorAll('.selected-file-copy strong')[1].textContent)
+      .toContain('costs.xlsx');
+    expect(compiled.querySelector<HTMLButtonElement>('.submit-button')?.disabled).toBe(false);
   });
 
-  it('should prevent navigating to workflow steps before their required action', async () => {
+  it('submits both files once and shows each backend result in Analysis', async () => {
     const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    const workflowSteps = compiled.querySelectorAll<HTMLButtonElement>('.workflow-step-button');
-
-    expect(workflowSteps[1].disabled).toBe(true);
-    expect(workflowSteps[2].disabled).toBe(true);
-    workflowSteps[1].click();
-    fixture.detectChanges();
-    expect(compiled.querySelector('.upload-section')).not.toBeNull();
-    expect(workflowSteps[0].getAttribute('aria-current')).toBe('step');
-  });
-
-  it('should provide spreadsheet and backend-generated RDA downloads in feedback', async () => {
-    const fixture = TestBed.createComponent(App);
+    let createdUrl = 0;
     vi.stubGlobal('URL', {
-      createObjectURL: vi.fn((blob: Blob) =>
-        blob.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-          ? 'blob:generated-rda'
-          : 'blob:returned-spreadsheet',
-      ),
+      createObjectURL: vi.fn(() => `blob:result-${++createdUrl}`),
       revokeObjectURL: vi.fn(),
     });
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const firstFile = new File(['docx data'], 'RDA.docx', {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    });
-    const secondFile = new File(['spreadsheet data'], 'spreadsheet.xls', {
-      type: 'application/vnd.ms-excel',
-    });
-    const fileInputs = fixture.nativeElement.querySelectorAll('input[type="file"]');
-
-    for (const [index, file] of [firstFile, secondFile].entries()) {
-      Object.defineProperty(fileInputs[index], 'files', { value: [file] });
-      fileInputs[index].dispatchEvent(new Event('change'));
-    }
-
-    fixture.nativeElement.querySelector<HTMLButtonElement>('.finalize-upload').click();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const inputs = compiled.querySelectorAll<HTMLInputElement>('input[type="file"]');
+    const minuta = new File(['docx input'], 'RDA.docx');
+    const planilha = new File(['xlsx input'], 'costs.xlsx');
+    Object.defineProperty(inputs[0], 'files', { value: [minuta] });
+    inputs[0].dispatchEvent(new Event('change'));
+    Object.defineProperty(inputs[1], 'files', { value: [planilha] });
+    inputs[1].dispatchEvent(new Event('change'));
     fixture.detectChanges();
-    const workflowSteps = fixture.nativeElement.querySelectorAll<HTMLButtonElement>(
-      '.workflow-step-button',
-    );
-    expect(workflowSteps[1].disabled).toBe(false);
-    expect(workflowSteps[2].disabled).toBe(true);
-    expect(fixture.nativeElement.querySelector<HTMLAnchorElement>('a[download="RDA.docx"]'))
-      .not.toBeNull();
-    expect(fixture.nativeElement.querySelector<HTMLAnchorElement>(
-      'a[download="spreadsheet.xls"]',
-    )).not.toBeNull();
-    fixture.nativeElement.querySelector<HTMLButtonElement>('.start-review').click();
-    fixture.detectChanges();
-    expect(workflowSteps[2].disabled).toBe(false);
 
+    compiled.querySelector<HTMLButtonElement>('.submit-button')?.click();
     const request = TestBed.inject(HttpTestingController).expectOne(
       'http://localhost:8000/api/reviews/ingest',
     );
-    expect(request.request.method).toBe('POST');
-    expect(((request.request.body as FormData).get('file_1') as File).name).toBe('RDA.docx');
-    expect(((request.request.body as FormData).get('file_2') as File).name)
-      .toBe('spreadsheet.xls');
-    const multipartResponse = createMultipartResponse(true);
-    request.flush(multipartResponse.body, { headers: multipartResponse.headers });
+    const formData = request.request.body as FormData;
+    expect((formData.get('file_1') as File).name).toBe('RDA.docx');
+    expect((formData.get('file_2') as File).name).toBe('costs.xlsx');
+
+    const multipart = createMultipartResponse(true);
+    request.flush(multipart.body, { headers: multipart.headers });
     await fixture.whenStable();
     fixture.detectChanges();
-    expect(workflowSteps[2].getAttribute('aria-current')).toBe('step');
-    expect(fixture.nativeElement.querySelector('.start-review')?.textContent)
-      .toContain('Review started');
-    const generatedRda = fixture.nativeElement.querySelector<HTMLAnchorElement>(
-      '.feedback-download[download="Mock_RDA.docx"]',
-    );
-    expect(generatedRda?.getAttribute('href')).toBe('blob:generated-rda');
-    const spreadsheet = fixture.nativeElement.querySelector<HTMLAnchorElement>(
-      '.feedback-download[download="spreadsheet.xls"]',
-    );
-    expect(spreadsheet?.getAttribute('aria-label')).toContain('Download spreadsheet');
-    expect(spreadsheet?.textContent).toContain('Download');
-    expect(spreadsheet?.getAttribute('href')).toBe('blob:returned-spreadsheet');
-    expect(fixture.nativeElement.querySelectorAll('.feedback-file-card').length).toBe(2);
-    expect(fixture.nativeElement.querySelector('.docx-preview')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.document-comments')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.review-file-list')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.metrics-column')).toBeNull();
+
+    expect(compiled.querySelector('.analysis-step')).not.toBeNull();
+    expect(compiled.querySelector<HTMLAnchorElement>(
+      'a[download="Mock_RDA.docx"]',
+    )?.getAttribute('href')).toBe('blob:result-1');
+    expect(compiled.querySelector<HTMLAnchorElement>(
+      'a[download="costs.xlsx"]',
+    )?.getAttribute('href')).toBe('blob:result-2');
+    expect(compiled.querySelector<HTMLButtonElement>('.step-button[aria-current="step"]')
+      ?.textContent)
+      .toContain('Analysis');
   });
 
-  it('should provide only the generated RDA download when no spreadsheet was uploaded', async () => {
+  it('requires a spreadsheet before submitting the RDA', async () => {
     const fixture = TestBed.createComponent(App);
-    vi.stubGlobal('URL', {
-      createObjectURL: vi.fn().mockReturnValue('blob:generated-rda'),
-      revokeObjectURL: vi.fn(),
-    });
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const rda = new File(['docx data'], 'RDA.docx', {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    const compiled = fixture.nativeElement as HTMLElement;
+    const inputs = compiled.querySelectorAll<HTMLInputElement>('input[type="file"]');
+    Object.defineProperty(inputs[0], 'files', {
+      value: [new File(['docx'], 'RDA.docx')],
     });
-    const fileInputs = fixture.nativeElement.querySelectorAll('input[type="file"]');
-    Object.defineProperty(fileInputs[0], 'files', { value: [rda] });
-    fileInputs[0].dispatchEvent(new Event('change'));
+    inputs[0].dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
-    const finalizeButton = fixture.nativeElement.querySelector<HTMLButtonElement>('.finalize-upload');
-    expect(finalizeButton?.disabled).toBe(false);
-    finalizeButton?.click();
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector<HTMLAnchorElement>('a[download="RDA.docx"]'))
-      .not.toBeNull();
-    expect(fixture.nativeElement.querySelector<HTMLAnchorElement>('a[download="spreadsheet.xlsx"]'))
-      .toBeNull();
-    fixture.nativeElement.querySelector<HTMLButtonElement>('.start-review').click();
-
-    const request = TestBed.inject(HttpTestingController).expectOne(
+    expect(compiled.querySelector<HTMLButtonElement>('.submit-button')?.disabled).toBe(true);
+    compiled.querySelector<HTMLButtonElement>('.submit-button')?.click();
+    TestBed.inject(HttpTestingController).expectNone(
       'http://localhost:8000/api/reviews/ingest',
     );
-    expect(((request.request.body as FormData).get('file_1') as File).name).toBe('RDA.docx');
-    expect((request.request.body as FormData).has('file_2')).toBe(false);
-    const multipartResponse = createMultipartResponse(false);
-    request.flush(multipartResponse.body, { headers: multipartResponse.headers });
-    await fixture.whenStable();
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.feedback-download[download="spreadsheet.xlsx"]'))
-      .toBeNull();
-    expect(fixture.nativeElement.querySelector('.feedback-download[download="Mock_RDA.docx"]')
-      ?.getAttribute('aria-label'))
-      .toContain('Download generated RDA');
-    expect(fixture.nativeElement.querySelector('.review-file-list')).toBeNull();
   });
 });

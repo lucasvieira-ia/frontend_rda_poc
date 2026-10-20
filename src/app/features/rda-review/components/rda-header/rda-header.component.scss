@@ -1,0 +1,63 @@
+:host {
+  display: block;
+  border-bottom: 1px solid #e7ebf1;
+  background: #fff;
+}
+
+.rda-header {
+  display: flex;
+  width: min(1120px, calc(100% - 48px));
+  height: 72px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 auto;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #182a43;
+  text-decoration: none;
+}
+
+.brand-mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #397af2, #1954cb);
+  box-shadow: 0 5px 12px rgb(37 99 235 / 20%);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 750;
+}
+
+.brand-name {
+  font-size: 18px;
+  font-weight: 750;
+  letter-spacing: -0.7px;
+}
+
+.brand-name span {
+  color: #7890b2;
+  font-weight: 500;
+}
+
+.header-context {
+  color: #98a2b1;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+@media (max-width: 520px) {
+  .rda-header {
+    width: calc(100% - 32px);
+  }
+
+  .header-context {
+    font-size: 8px;
+  }
+}
