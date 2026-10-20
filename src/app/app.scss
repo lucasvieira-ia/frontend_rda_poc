@@ -599,32 +599,185 @@ h1 {
   grid-column: 1 / -1;
   width: 100%;
   min-width: 0;
-  padding: 17px 0;
+  padding: 20px 0 4px;
   border-top: 1px solid #edf0f4;
+}
+
+.feedback-downloads-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .feedback-downloads h2 {
   color: #243650;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
 }
 
+.feedback-downloads-heading p {
+  margin-top: 5px;
+  color: #8793a3;
+  font-size: 12px;
+}
+
+.files-ready-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid #ccebdd;
+  border-radius: 20px;
+  background: #f0faf5;
+  color: #27845a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.files-ready-badge::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #35a772;
+  content: "";
+}
+
+.files-pending-badge {
+  border-color: #f2dfb8;
+  background: #fffaf0;
+  color: #9a6a16;
+}
+
+.files-pending-badge::before {
+  background: #d69a2d;
+}
+
 .feedback-download-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.feedback-file-card {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px 20px;
-  margin-top: 12px;
+  min-width: 0;
+  align-items: center;
+  gap: 13px;
+  padding: 14px;
+  border: 1px solid #e5ebf3;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #fff, #fbfcfe);
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.feedback-file-card:hover {
+  transform: translateY(-1px);
+  border-color: #cbdaf0;
+  box-shadow: 0 5px 14px rgba(35, 62, 99, 0.07);
+}
+
+.feedback-file-icon {
+  display: grid;
+  width: 42px;
+  height: 46px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #e4eaf2;
+  border-radius: 9px;
+  background: #f8fafc;
+  color: #6c7d95;
+}
+
+.feedback-file-icon svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+.spreadsheet-file-icon {
+  border-color: #d5ecdf;
+  background: #f2faf5;
+  color: #32865b;
+}
+
+.rda-file-icon {
+  border-color: #dbe6fb;
+  background: #f3f7ff;
+  color: #386dcc;
+}
+
+.feedback-file-info {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 3px;
+}
+
+.feedback-file-type {
+  color: #8793a3;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+}
+
+.feedback-file-info strong {
+  overflow: hidden;
+  color: #2a3c55;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feedback-file-description {
+  color: #8a96a6;
+  font-size: 11px;
 }
 
 .feedback-download {
-  color: #2868df;
-  font-size: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  min-height: 34px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid #d9e5f7;
+  border-radius: 7px;
+  background: #f5f8ff;
+  color: #2862c1;
+  font-size: 11px;
+  font-weight: 700;
   text-decoration: none;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
 }
 
 .feedback-download:hover {
-  text-decoration: underline;
+  border-color: #2868df;
+  background: #2868df;
+  color: #fff;
+}
+
+.feedback-download svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.feedback-progress {
+  margin-top: 12px;
+  color: #7b8798;
+  font-size: 12px;
 }
 
 .generation-error {
@@ -1001,6 +1154,19 @@ h1 {
     grid-template-columns: 1fr auto;
     gap: 19px 14px;
     padding: 18px;
+  }
+
+  .feedback-download-list {
+    grid-template-columns: 1fr;
+  }
+
+  .feedback-file-card {
+    gap: 10px;
+    padding: 11px;
+  }
+
+  .feedback-download {
+    padding-inline: 8px;
   }
 
   .project-column {

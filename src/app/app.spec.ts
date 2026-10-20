@@ -178,8 +178,10 @@ describe('App', () => {
     const spreadsheet = fixture.nativeElement.querySelector<HTMLAnchorElement>(
       '.feedback-download[download="spreadsheet.xls"]',
     );
-    expect(spreadsheet?.textContent).toContain('Download spreadsheet');
+    expect(spreadsheet?.getAttribute('aria-label')).toContain('Download spreadsheet');
+    expect(spreadsheet?.textContent).toContain('Download');
     expect(spreadsheet?.getAttribute('href')).toBe('blob:returned-spreadsheet');
+    expect(fixture.nativeElement.querySelectorAll('.feedback-file-card').length).toBe(2);
     expect(fixture.nativeElement.querySelector('.docx-preview')).toBeNull();
     expect(fixture.nativeElement.querySelector('.document-comments')).toBeNull();
     expect(fixture.nativeElement.querySelector('.review-file-list')).toBeNull();
@@ -225,7 +227,7 @@ describe('App', () => {
     expect(fixture.nativeElement.querySelector('.feedback-download[download="spreadsheet.xlsx"]'))
       .toBeNull();
     expect(fixture.nativeElement.querySelector('.feedback-download[download="Mock_RDA.docx"]')
-      ?.textContent)
+      ?.getAttribute('aria-label'))
       .toContain('Download generated RDA');
     expect(fixture.nativeElement.querySelector('.review-file-list')).toBeNull();
   });
