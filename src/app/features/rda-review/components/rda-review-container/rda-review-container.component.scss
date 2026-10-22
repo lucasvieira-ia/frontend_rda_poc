@@ -298,14 +298,14 @@ app-rda-stepper {
 
 .analysis-description {
   margin: 8px 0 0;
-  color: #7f8b9d;
+  color: #26384c;
   font-size: 11px;
   line-height: 1.4;
 }
 
 .result-file-list {
   display: grid;
-  width: min(100%, 650px);
+  width: 100%;
   gap: 11px;
   margin-top: 24px;
   text-align: left;
@@ -371,7 +371,7 @@ app-rda-stepper {
 }
 
 .result-file-copy > span {
-  color: #8793a3;
+  color: #26384c;
   font-size: 9px;
   font-weight: 750;
   letter-spacing: 0.09em;
@@ -387,7 +387,7 @@ app-rda-stepper {
 }
 
 .result-file-copy small {
-  color: #8a96a6;
+  color: #26384c;
   font-size: 10px;
 }
 

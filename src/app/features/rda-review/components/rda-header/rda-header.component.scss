@@ -39,36 +39,6 @@
   letter-spacing: -0.6px;
 }
 
-.user-menu {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #666;
-  font: inherit;
-  font-size: 9px;
-  cursor: pointer;
-}
-
-.user-menu svg {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1;
-}
-
-.user-chevron {
-  width: 5px;
-  height: 5px;
-  margin: -3px 2px 0 1px;
-  transform: rotate(45deg);
-  border-right: 1px solid currentColor;
-  border-bottom: 1px solid currentColor;
-}
-
 @media (max-width: 520px) {
   .rda-header {
     padding: 0 16px;
