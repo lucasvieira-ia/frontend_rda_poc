@@ -43,12 +43,13 @@ const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
             <path d="M12 15V4m0 0L8 8m4-4 4 4M5 14v5h14v-5"></path>
           </svg>
         </span>
-        <strong>Drag and drop your file here</strong>
-        <span class="drop-hint">or</span>
+        <strong>{{ selectionPrompt }}</strong>
         <button class="browse-button" type="button" (click)="fileInput.click()">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M1.5 3.5h4l1.5 1.75h7.5v7.25h-12z"></path>
+          </svg>
           Browse files
         </button>
-        <span class="file-constraints">Accepted: {{ acceptedExtensions }}</span>
       </div>
 
       @if (uploadedFile) {
@@ -94,6 +95,20 @@ export class FileUploadBoxComponent {
   @Input() required = false;
   @Input() uploadedFile: UploadedFile | null = null;
   @Output() readonly fileChange = new EventEmitter<UploadedFile | null>();
+
+  protected get selectionPrompt(): string {
+    const extensions = this.acceptedExtensions
+      .split(',')
+      .map((extension) => extension.trim())
+      .filter(Boolean);
+    if (extensions.length === 1) {
+      return `Select a ${extensions[0]} file`;
+    }
+    if (extensions.length > 1) {
+      return `Select a file (${extensions.join(' or ')})`;
+    }
+    return 'Select a file';
+  }
 
   protected onFileSelected(event: Event): void {
     if (event.target instanceof HTMLInputElement) {
