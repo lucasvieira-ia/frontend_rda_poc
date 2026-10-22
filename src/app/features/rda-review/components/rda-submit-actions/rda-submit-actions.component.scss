@@ -12,7 +12,7 @@
 
 .required-note {
   color: #7e8999;
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .required-note span {
@@ -22,26 +22,29 @@
 
 .submit-button {
   display: inline-flex;
-  min-height: 42px;
+  min-height: 30px;
   align-items: center;
   justify-content: center;
   gap: 9px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 7px;
-  background: #2868df;
-  box-shadow: 0 3px 8px rgb(37 99 235 / 18%);
+  padding: 0 12px;
+  border: 1px solid #0672ce;
+  border-radius: 2px;
+  background: #0672ce;
   color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  transition: background 140ms ease, opacity 140ms ease;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, opacity 140ms ease;
 }
 
 .submit-button:hover:not(:disabled) {
-  background: #1f58c7;
+  border-color: #005da8;
+  background: #005da8;
 }
 
 .submit-button:disabled {
+  border-color: #0672ce;
   cursor: not-allowed;
   opacity: 0.48;
 }

@@ -18,18 +18,18 @@
 }
 
 .section-heading h2 {
-  margin-top: 8px;
+  margin: 0;
   color: #243650;
-  font-size: 20px;
-  font-weight: 720;
-  letter-spacing: -0.5px;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .section-heading p {
-  margin-top: 7px;
+  margin: 8px 0 0;
   color: #7f8b9d;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .upload-grid {
@@ -45,7 +45,7 @@
   border-radius: 7px;
   background: #fff8f7;
   color: #b42318;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.5;
 }
 

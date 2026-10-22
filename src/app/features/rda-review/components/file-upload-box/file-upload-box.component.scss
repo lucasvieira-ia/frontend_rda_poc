@@ -22,15 +22,15 @@
 
 .upload-card-heading h2 {
   color: #253650;
-  font-size: 14px;
-  font-weight: 720;
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .upload-card-heading p {
   margin-top: 5px;
   color: #8793a3;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 10px;
+  line-height: 1.4;
 }
 
 .required-badge,
@@ -38,7 +38,7 @@
   flex: 0 0 auto;
   padding: 4px 8px;
   border-radius: 20px;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
 }
 
@@ -104,14 +104,14 @@
 
 .drop-zone > strong {
   color: #3f5069;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 650;
 }
 
 .drop-hint,
 .file-constraints {
   color: #929dae;
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .drop-hint {
@@ -119,20 +119,22 @@
 }
 
 .browse-button {
-  min-height: 32px;
+  min-height: 30px;
   margin-top: 8px;
   padding: 0 12px;
-  border: 1px solid #d3e0f5;
-  border-radius: 6px;
-  background: #fff;
-  color: #2862c1;
-  font-size: 11px;
-  font-weight: 700;
+  border: 1px solid #0672ce;
+  border-radius: 2px;
+  background: #0672ce;
+  color: #fff;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
 }
 
 .browse-button:hover {
-  border-color: #9ab8e9;
-  background: #f5f8ff;
+  border-color: #005da8;
+  background: #005da8;
 }
 
 .file-constraints {
@@ -193,14 +195,14 @@
 .selected-file-copy strong {
   overflow: hidden;
   color: #34445c;
-  font-size: 11px;
+  font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .selected-file-copy > span {
   color: #8995a5;
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .selected-file-copy .file-error {
@@ -214,17 +216,21 @@
 
 .remove-file {
   flex: 0 0 auto;
-  padding: 4px;
-  border: 0;
-  background: transparent;
-  color: #738198;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid #0672ce;
+  border-radius: 2px;
+  background: #0672ce;
+  color: #fff;
+  font: inherit;
   font-size: 10px;
   font-weight: 650;
   cursor: pointer;
 }
 
 .remove-file:hover {
-  color: #b42318;
+  border-color: #005da8;
+  background: #005da8;
 }
 
 @media (max-width: 520px) {

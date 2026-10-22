@@ -29,6 +29,7 @@
   border: 0;
   background: transparent;
   color: #637188;
+  font: inherit;
   cursor: pointer;
   text-align: left;
 }
@@ -47,8 +48,8 @@
   border-radius: 50%;
   background: #fff;
   color: #8c98a9;
-  font-size: 11px;
-  font-weight: 750;
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .step-copy {
@@ -59,13 +60,13 @@
 
 .step-copy strong {
   color: #44536a;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 650;
 }
 
 .step-copy span {
   color: #8a96a7;
-  font-size: 11px;
+  font-size: 9px;
 }
 
 .step-button.active .step-indicator,
