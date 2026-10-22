@@ -72,9 +72,23 @@ describe('RdaReviewContainer', () => {
     skillsTab?.click();
     fixture.detectChanges();
 
-    expect(compiled.querySelector('.skills-placeholder h1')?.textContent).toContain('AI Skills');
+    expect(compiled.querySelector('#skills-title')?.textContent).toContain('AI Skills');
     expect(compiled.querySelector('.navigation-tab[aria-current="page"]')?.textContent)
       .toContain('AI Skills');
+    expect(compiled.querySelector('#system-prompt')).not.toBeNull();
+    expect(compiled.querySelector('#custom-prompt')).not.toBeNull();
+
+    const customPrompt = compiled.querySelector<HTMLTextAreaElement>('#custom-prompt');
+    if (!customPrompt) {
+      throw new Error('The custom prompt editor was not rendered.');
+    }
+    customPrompt.value = 'Prompt personalizado';
+    customPrompt.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    compiled.querySelector<HTMLButtonElement>('.save-prompt-button')?.click();
+    fixture.detectChanges();
+    expect(compiled.querySelector('.custom-badge')?.textContent)
+      .toContain('Saved');
 
     compiled.querySelector<HTMLButtonElement>('.navigation-tab')?.click();
     fixture.detectChanges();

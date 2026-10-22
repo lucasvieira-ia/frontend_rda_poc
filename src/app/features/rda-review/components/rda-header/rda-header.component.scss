@@ -7,50 +7,66 @@
 .rda-header {
   display: flex;
   width: 100%;
-  height: 72px;
+  height: 38px;
   align-items: center;
   justify-content: space-between;
   margin: 0;
-  padding: 0 16px;
+  padding: 0 18px;
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  color: #182a43;
+  color: #0672ce;
   text-decoration: none;
 }
 
-.brand-mark {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border-radius: 10px;
-  background: linear-gradient(145deg, #397af2, #1954cb);
-  box-shadow: 0 5px 12px rgb(37 99 235 / 20%);
-  color: #fff;
-  font-size: 18px;
-  font-weight: 750;
+.brand-name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: 16px;
+  letter-spacing: -0.5px;
 }
 
-.brand-name {
-  font-size: 18px;
-  font-weight: 750;
-  letter-spacing: -0.7px;
+.brand-name strong {
+  font-size: 15px;
+  font-weight: 800;
 }
 
 .brand-name span {
-  color: #7890b2;
-  font-weight: 500;
+  font-weight: 350;
+  letter-spacing: -0.6px;
 }
 
-.header-context {
-  color: #98a2b1;
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: 0.12em;
+.user-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #666;
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.user-menu svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+}
+
+.user-chevron {
+  width: 5px;
+  height: 5px;
+  margin: -3px 2px 0 1px;
+  transform: rotate(45deg);
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
 }
 
 @media (max-width: 520px) {
@@ -58,7 +74,7 @@
     padding: 0 16px;
   }
 
-  .header-context {
-    font-size: 8px;
+  .brand-name {
+    font-size: 14px;
   }
 }

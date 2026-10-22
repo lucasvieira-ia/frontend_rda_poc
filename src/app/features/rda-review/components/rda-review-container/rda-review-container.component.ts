@@ -29,6 +29,13 @@ export class RdaReviewContainerComponent implements OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly generatedObjectUrls: string[] = [];
 
+  protected readonly systemPrompt =
+    'Act as a specialist in financial analysis of R&D&I projects. Your role is to check the files for financial inconsistencies. Present the results in text format.';
+  protected readonly customPrompt = signal(
+    'Act as a specialist in financial analysis of R&D&I projects. Your role is to check the files for financial inconsistencies. Present the results in',
+  );
+  protected readonly promptSaved = signal(false);
+  protected readonly promptUpdatedAt = signal('10/22/2026 at 3:34 PM');
   protected readonly activeNavigationTab = signal<'analysis' | 'skills'>('analysis');
   protected readonly activeStep = signal<RdaStepId>('preparation');
   protected readonly minutaFile = signal<UploadedFile | null>(null);
@@ -96,6 +103,27 @@ export class RdaReviewContainerComponent implements OnDestroy {
 
   protected selectNavigationTab(tab: 'analysis' | 'skills'): void {
     this.activeNavigationTab.set(tab);
+  }
+
+  protected updateCustomPrompt(event: Event): void {
+    if (event.target instanceof HTMLTextAreaElement) {
+      this.customPrompt.set(event.target.value);
+      this.promptSaved.set(false);
+    }
+  }
+
+  protected saveCustomPrompt(): void {
+    this.promptSaved.set(true);
+    this.promptUpdatedAt.set(
+      new Date().toLocaleString('en-US', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      }).replace(',', ' at'),
+    );
   }
 
   protected async onSubmit(): Promise<void> {

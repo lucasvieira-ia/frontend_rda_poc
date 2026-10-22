@@ -12,7 +12,8 @@
           (click)="selectNavigationTab('analysis')"
         >
           <svg viewBox="0 0 20 20" aria-hidden="true">
-            <path d="M3.5 4.5h5l1.5 1.75h6.5v9.25h-13z"></path>
+            <path d="M6 2.75h5l4 4v10.5H5V2.75h1Z"></path>
+            <path d="M11 3v4h4M7.5 11h5M7.5 13.75h5"></path>
           </svg>
           Analysis
         </button>
@@ -33,12 +34,12 @@
     </aside>
 
     <main id="rda-review" class="page-content">
-      @if (activeNavigationTab() === 'analysis') {
-        <section class="page-intro">
-          <h1>RDA Review</h1>
-          <p>Upload your RDA documents and retrieve the backend analysis files.</p>
-        </section>
+      <section class="page-intro" aria-labelledby="page-title">
+        <h1 id="page-title">RDA Review</h1>
+        <p>Review your project's RDA and get feedback quickly</p>
+      </section>
 
+      @if (activeNavigationTab() === 'analysis') {
         <section class="workflow-card" aria-label="RDA submission workflow">
           <app-rda-stepper [steps]="steps()" (stepSelected)="selectStep($event)" />
 
@@ -133,9 +134,41 @@
           }
         </section>
       } @else {
-        <section class="page-intro skills-placeholder" aria-labelledby="skills-title">
-          <h1 id="skills-title">AI Skills</h1>
-          <p>This area is reserved for AI-powered analysis skills.</p>
+        <section class="skills-card" aria-labelledby="skills-title">
+          <h2 id="skills-title">AI Skills</h2>
+          <p class="skills-description">Edit the default prompt used by agents</p>
+
+          <div class="prompt-grid">
+            <div class="prompt-column">
+              <div class="prompt-heading">
+                <label for="system-prompt">Current prompt</label>
+                <span class="prompt-badge system-badge">System default</span>
+              </div>
+              <textarea id="system-prompt" readonly [value]="systemPrompt"></textarea>
+            </div>
+
+            <div class="prompt-column">
+              <div class="prompt-heading">
+                <label for="custom-prompt">My prompt</label>
+                <span
+                  class="prompt-badge custom-badge"
+                  [class.saved-badge]="promptSaved()"
+                >{{ promptSaved() ? 'Saved' : 'In use right now' }}</span>
+                <span class="prompt-updated">Updated {{ promptUpdatedAt() }}</span>
+              </div>
+              <textarea
+                id="custom-prompt"
+                [value]="customPrompt()"
+                (input)="updateCustomPrompt($event)"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="skills-actions">
+            <button class="save-prompt-button" type="button" (click)="saveCustomPrompt()">
+              Save and use new prompt
+            </button>
+          </div>
         </section>
       }
 
