@@ -73,21 +73,26 @@
                 <div class="result-file-list">
                   @if (generatedRdaUrl()) {
                     <article class="result-file">
-                      <span class="result-file-icon rda-icon" aria-hidden="true">
+                      <a
+                        class="result-file-icon rda-icon result-file-icon-link"
+                        [href]="generatedRdaUrl()"
+                        [download]="generatedRdaName()"
+                        aria-label="Download generated RDA document"
+                      >
                         <svg viewBox="0 0 24 24">
                           <path d="M6 3.75h8l4 4v12.5H6z"></path>
                           <path d="M14 3.75v4h4M9 13h6M9 16h4"></path>
                         </svg>
-                      </span>
+                      </a>
                       <span class="result-file-copy">
-                        <span>GENERATED RDA</span>
-                        <strong>Mock_RDA.docx</strong>
-                        <small>Returned by the backend</small>
+                        <span>GENERATED RDA WITH ANALYSIS AND FEEDBACKS</span>
+                        <strong>{{ generatedRdaName() }}</strong>
+                        <small>Returned by AI Agent</small>
                       </span>
                       <a
                         class="result-download"
                         [href]="generatedRdaUrl()"
-                        download="Mock_RDA.docx"
+                        [download]="generatedRdaName()"
                         aria-label="Download generated RDA document"
                       >
                         <svg viewBox="0 0 20 20" aria-hidden="true">
@@ -96,20 +101,29 @@
                         Download
                       </a>
                     </article>
+                  } @else {
+                    <p class="result-unavailable" role="status">
+                      The RDA document is not available.
+                    </p>
                   }
 
                   @if (returnedSpreadsheetUrl() && returnedSpreadsheetName()) {
                     <article class="result-file">
-                      <span class="result-file-icon spreadsheet-icon" aria-hidden="true">
+                      <a
+                        class="result-file-icon spreadsheet-icon result-file-icon-link"
+                        [href]="returnedSpreadsheetUrl()"
+                        [download]="returnedSpreadsheetName()"
+                        [attr.aria-label]="'Download spreadsheet ' + returnedSpreadsheetName()"
+                      >
                         <svg viewBox="0 0 24 24">
                           <path d="M6 3.75h8l4 4v12.5H6z"></path>
                           <path d="M14 3.75v4h4M9 12h6M9 15h6M9 18h6"></path>
                         </svg>
-                      </span>
+                      </a>
                       <span class="result-file-copy">
-                        <span>SPREADSHEET</span>
+                        <span>GENERATED SPREADSHEET WITH ANALYSIS AND FEEDBACKS</span>
                         <strong [title]="returnedSpreadsheetName()">{{ returnedSpreadsheetName() }}</strong>
-                        <small>Returned by the backend</small>
+                        <small>Returned by AI Agent</small>
                       </span>
                       <a
                         class="result-download"
@@ -123,6 +137,10 @@
                         Download
                       </a>
                     </article>
+                  } @else {
+                    <p class="result-unavailable" role="status">
+                      The spreadsheet is not available.
+                    </p>
                   }
                 </div>
 

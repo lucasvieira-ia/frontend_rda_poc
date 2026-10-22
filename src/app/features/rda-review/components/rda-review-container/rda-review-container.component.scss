@@ -311,6 +311,17 @@ app-rda-stepper {
   text-align: left;
 }
 
+.result-unavailable {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #d2dee8;
+  border-radius: 6px;
+  background: #eaf1f6;
+  color: #26384c;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .result-file {
   display: flex;
   min-width: 0;
@@ -339,6 +350,17 @@ app-rda-stepper {
   border-radius: 9px;
   background: #f8fafc;
   color: #6c7d95;
+}
+
+.result-file-icon-link {
+  text-decoration: none;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+
+.result-file-icon-link:hover {
+  border-color: #0672ce;
+  background: #eaf4fc;
+  color: #0672ce;
 }
 
 .result-file-icon svg {
@@ -393,30 +415,29 @@ app-rda-stepper {
 
 .result-download {
   display: inline-flex;
-  min-height: 30px;
+  min-height: 24px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 0 12px;
-  border: 1px solid #0672ce;
-  border-radius: 2px;
-  background: #0672ce;
-  color: #fff;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #0672ce;
   font-size: 10px;
-  font-weight: 650;
+  font-weight: 400;
   text-decoration: none;
-  transition: border-color 140ms ease, background 140ms ease;
+  transition: color 140ms ease;
 }
 
 .result-download:hover {
-  border-color: #005da8;
-  background: #005da8;
+  color: #005da8;
+  text-decoration: underline;
 }
 
 .result-download svg {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;

@@ -5,14 +5,17 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './app';
 
-function createMultipartResponse(includeSpreadsheet: boolean): {
+function createMultipartResponse(includeSpreadsheet: boolean, includeRda = true): {
   body: Blob;
   headers: HttpHeaders;
 } {
   const boundary = 'test-boundary';
-  const parts = [
-    `--${boundary}\r\nContent-Disposition: form-data; name="rda"; filename="Mock_RDA.docx"\r\nContent-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\n\r\ngenerated RDA\r\n`,
-  ];
+  const parts: string[] = [];
+  if (includeRda) {
+    parts.push(
+      `--${boundary}\r\nContent-Disposition: form-data; name="rda"; filename="Mock_RDA.docx"\r\nContent-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\n\r\ngenerated RDA\r\n`,
+    );
+  }
   if (includeSpreadsheet) {
     parts.push(
       `--${boundary}\r\nContent-Disposition: form-data; name="spreadsheet"; filename="spreadsheet.xlsx"\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\nreturned spreadsheet\r\n`,
@@ -200,6 +203,112 @@ describe('RdaReviewContainer', () => {
     expect(compiled.querySelector<HTMLButtonElement>('.step-button[aria-current="step"]')
       ?.textContent)
       .toContain('Analysis');
+  });
+
+  it('shows the spreadsheet and reports the missing RDA document', async () => {
+    const fixture = TestBed.createComponent(App);
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn(() => 'blob:spreadsheet-result'),
+      revokeObjectURL: vi.fn(),
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const inputs = compiled.querySelectorAll<HTMLInputElement>('input[type="file"]');
+    for (const [input, file] of [
+      [inputs[0], new File(['docx'], 'RDA.docx')],
+      [inputs[1], new File(['xlsx'], 'costs.xlsx')],
+    ] as const) {
+      Object.defineProperty(input, 'files', { value: [file] });
+      input.dispatchEvent(new Event('change'));
+    }
+    fixture.detectChanges();
+    compiled.querySelector<HTMLButtonElement>('.submit-button')?.click();
+
+    const request = TestBed.inject(HttpTestingController).expectOne(
+      'http://localhost:8000/api/reviews/ingest',
+    );
+    const multipart = createMultipartResponse(true, false);
+    request.flush(multipart.body, { headers: multipart.headers });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('a[download="costs.xlsx"]')?.getAttribute('href'))
+      .toBe('blob:spreadsheet-result');
+    expect(compiled.querySelector('.result-unavailable')?.textContent)
+      .toContain('The RDA document is not available.');
+  });
+
+  it('shows the RDA document and reports the missing spreadsheet', async () => {
+    const fixture = TestBed.createComponent(App);
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn(() => 'blob:rda-result'),
+      revokeObjectURL: vi.fn(),
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const inputs = compiled.querySelectorAll<HTMLInputElement>('input[type="file"]');
+    for (const [input, file] of [
+      [inputs[0], new File(['docx'], 'RDA.docx')],
+      [inputs[1], new File(['xlsx'], 'costs.xlsx')],
+    ] as const) {
+      Object.defineProperty(input, 'files', { value: [file] });
+      input.dispatchEvent(new Event('change'));
+    }
+    fixture.detectChanges();
+    compiled.querySelector<HTMLButtonElement>('.submit-button')?.click();
+
+    const request = TestBed.inject(HttpTestingController).expectOne(
+      'http://localhost:8000/api/reviews/ingest',
+    );
+    const multipart = createMultipartResponse(false, true);
+    request.flush(multipart.body, { headers: multipart.headers });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('a[download="Mock_RDA.docx"]')?.getAttribute('href'))
+      .toBe('blob:rda-result');
+    expect(compiled.querySelector('.result-unavailable')?.textContent)
+      .toContain('The spreadsheet is not available.');
+  });
+
+  it('shows a friendly message instead of backend error details', async () => {
+    const fixture = TestBed.createComponent(App);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const inputs = compiled.querySelectorAll<HTMLInputElement>('input[type="file"]');
+    for (const [input, file] of [
+      [inputs[0], new File(['docx'], 'RDA.docx')],
+      [inputs[1], new File(['xlsx'], 'costs.xlsx')],
+    ] as const) {
+      Object.defineProperty(input, 'files', { value: [file] });
+      input.dispatchEvent(new Event('change'));
+    }
+    fixture.detectChanges();
+    compiled.querySelector<HTMLButtonElement>('.submit-button')?.click();
+
+    const request = TestBed.inject(HttpTestingController).expectOne(
+      'http://localhost:8000/api/reviews/ingest',
+    );
+    request.flush(
+      { detail: 'Sensitive internal backend failure' },
+      { status: 500, statusText: 'Internal Server Error' },
+    );
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const alert = compiled.querySelector('[role="alert"]');
+    expect(alert?.textContent)
+      .toContain("We couldn't process your files right now. Please try again.");
+    expect(alert?.textContent).not.toContain('Sensitive internal backend failure');
+    expect(alert?.textContent).not.toContain('500');
+    expect(consoleError).toHaveBeenCalled();
   });
 
   it('requires a spreadsheet before submitting the RDA', async () => {

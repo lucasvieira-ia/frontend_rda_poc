@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -43,6 +43,7 @@ export class RdaReviewContainerComponent implements OnDestroy {
   protected readonly isSubmitting = signal(false);
   protected readonly submitError = signal<string | null>(null);
   protected readonly generatedRdaUrl = signal<string | null>(null);
+  protected readonly generatedRdaName = signal<string | null>(null);
   protected readonly returnedSpreadsheetUrl = signal<string | null>(null);
   protected readonly returnedSpreadsheetName = signal<string | null>(null);
 
@@ -143,6 +144,7 @@ export class RdaReviewContainerComponent implements OnDestroy {
     this.submitError.set(null);
     this.revokeGeneratedFiles();
     this.generatedRdaUrl.set(null);
+    this.generatedRdaName.set(null);
     this.returnedSpreadsheetUrl.set(null);
     this.returnedSpreadsheetName.set(null);
 
@@ -171,33 +173,37 @@ export class RdaReviewContainerComponent implements OnDestroy {
       });
       const resultFiles = await multipartResponse.formData();
       const rda = resultFiles.get('rda');
-      if (!(rda instanceof Blob)) {
-        throw new Error('The API response does not contain an RDA document.');
-      }
-
       const spreadsheet = resultFiles.get('spreadsheet');
-      if (!(spreadsheet instanceof Blob)) {
-        throw new Error('The API response does not contain the spreadsheet.');
+      const hasRda = rda instanceof Blob && rda.size > 0;
+      const hasSpreadsheet = spreadsheet instanceof Blob && spreadsheet.size > 0;
+
+      if (hasRda && rda instanceof Blob) {
+        const fileName = rda instanceof File && rda.name ? rda.name : 'Mock_RDA.docx';
+        const rdaUrl = URL.createObjectURL(
+          new Blob([rda], {
+            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          }),
+        );
+        this.generatedObjectUrls.push(rdaUrl);
+        this.generatedRdaUrl.set(rdaUrl);
+        this.generatedRdaName.set(fileName);
       }
 
-      const rdaUrl = URL.createObjectURL(
-        new Blob([rda], {
-          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        }),
-      );
-      this.generatedObjectUrls.push(rdaUrl);
-      this.generatedRdaUrl.set(rdaUrl);
-
-      const spreadsheetUrl = URL.createObjectURL(
-        new Blob([spreadsheet], { type: planilha.type }),
-      );
-      this.generatedObjectUrls.push(spreadsheetUrl);
-      this.returnedSpreadsheetUrl.set(spreadsheetUrl);
-      this.returnedSpreadsheetName.set(form.planilhaDocument.name);
+      if (hasSpreadsheet && spreadsheet instanceof Blob) {
+        const spreadsheetUrl = URL.createObjectURL(
+          new Blob([spreadsheet], { type: spreadsheet.type || planilha.type }),
+        );
+        this.generatedObjectUrls.push(spreadsheetUrl);
+        this.returnedSpreadsheetUrl.set(spreadsheetUrl);
+        this.returnedSpreadsheetName.set(form.planilhaDocument.name);
+      }
 
       this.activeStep.set('analysis');
     } catch (error: unknown) {
-      this.submitError.set(`Could not submit the documents.${this.errorReason(error)}`);
+      console.error('Document submission failed:', error);
+      this.submitError.set(
+        "We couldn't process your files right now. Please try again.",
+      );
       this.activeStep.set('preparation');
     } finally {
       this.isSubmitting.set(false);
@@ -207,6 +213,7 @@ export class RdaReviewContainerComponent implements OnDestroy {
   protected startNewSubmission(): void {
     this.revokeGeneratedFiles();
     this.generatedRdaUrl.set(null);
+    this.generatedRdaName.set(null);
     this.returnedSpreadsheetUrl.set(null);
     this.returnedSpreadsheetName.set(null);
     this.minutaFile.set(null);
@@ -219,15 +226,5 @@ export class RdaReviewContainerComponent implements OnDestroy {
     for (const url of this.generatedObjectUrls.splice(0)) {
       URL.revokeObjectURL(url);
     }
-  }
-
-  private errorReason(error: unknown): string {
-    if (error instanceof HttpErrorResponse) {
-      return ` Request failed (${error.status}): ${error.message}`;
-    }
-    if (error instanceof Error) {
-      return ` ${error.message}`;
-    }
-    return ' An unknown error occurred.';
   }
 }
