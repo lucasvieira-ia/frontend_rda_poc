@@ -1,32 +1,17 @@
 import { provideHttpClient } from '@angular/common/http';
-import { HttpHeaders } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './app';
 
-function createMultipartResponse(includeSpreadsheet: boolean, includeRda = true): {
-  body: Blob;
-  headers: HttpHeaders;
-} {
-  const boundary = 'test-boundary';
-  const parts: string[] = [];
-  if (includeRda) {
-    parts.push(
-      `--${boundary}\r\nContent-Disposition: form-data; name="rda"; filename="Mock_RDA.docx"\r\nContent-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\n\r\ngenerated RDA\r\n`,
-    );
-  }
-  if (includeSpreadsheet) {
-    parts.push(
-      `--${boundary}\r\nContent-Disposition: form-data; name="spreadsheet"; filename="spreadsheet.xlsx"\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\nreturned spreadsheet\r\n`,
-    );
-  }
-  parts.push(`--${boundary}--\r\n`);
+function createEvaluationResponse(includeSpreadsheet: boolean, includeRda = true) {
   return {
-    body: new Blob(parts),
-    headers: new HttpHeaders({
-      'Content-Type': `multipart/form-data; boundary=${boundary}`,
-    }),
+    arquivo_docx_comentarios: includeRda ? 'MOCK_feedback_RDA.docx' : null,
+    arquivo_xlsx_comentarios: includeSpreadsheet ? 'MOCK_feedback_costs.xlsx' : null,
+    download_url_docx: includeRda ? '/api/v1/rda/download-feedback/docx-id' : null,
+    download_url_xlsx: includeSpreadsheet
+      ? '/api/v1/rda/download-feedback/xlsx-id'
+      : null,
   };
 }
 
@@ -62,6 +47,7 @@ describe('RdaReviewContainer', () => {
     expect(steps[1].disabled).toBe(true);
     expect(compiled.querySelector<HTMLButtonElement>('.submit-button')?.disabled).toBe(true);
     expect(compiled.querySelectorAll('.required-badge')).toHaveLength(2);
+    expect(compiled.querySelectorAll('.optional-badge')).toHaveLength(0);
   });
 
   it('switches between the Analysis and AI Skills navigation tabs', async () => {
@@ -175,30 +161,35 @@ describe('RdaReviewContainer', () => {
 
     compiled.querySelector<HTMLButtonElement>('.submit-button')?.click();
     const request = TestBed.inject(HttpTestingController).expectOne(
-      'http://localhost:8000/api/reviews/ingest',
+      'http://localhost:8000/api/v1/rda/evaluate?include_feedback=true',
     );
     const formData = request.request.body as FormData;
-    expect((formData.get('file_1') as File).name).toBe('RDA.docx');
-    expect((formData.get('file_2') as File).name).toBe('costs.xlsx');
+    expect((formData.get('docx_file') as File).name).toBe('RDA.docx');
+    expect((formData.get('xlsx_file') as File).name).toBe('costs.xlsx');
 
     fixture.detectChanges();
     expect(compiled.querySelector('.analysis-loading')?.textContent)
-      .toContain('Your files are being analyzed by our agent.');
+      .toContain('Your files are being analyzed');
     expect(compiled.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(compiled.querySelector('.step-item.completed .step-connector')).not.toBeNull();
 
-    const multipart = createMultipartResponse(true);
-    request.flush(multipart.body, { headers: multipart.headers });
+    request.flush(createEvaluationResponse(true));
+    await Promise.resolve();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('http://localhost:8000/api/v1/rda/download-feedback/docx-id')
+      .flush(new Blob(['generated RDA']));
+    http.expectOne('http://localhost:8000/api/v1/rda/download-feedback/xlsx-id')
+      .flush(new Blob(['generated spreadsheet']));
     await fixture.whenStable();
     fixture.detectChanges();
 
     expect(compiled.querySelector('.analysis-step')).not.toBeNull();
     expect(compiled.querySelector('.analysis-loading')).toBeNull();
     expect(compiled.querySelector<HTMLAnchorElement>(
-      'a[download="Mock_RDA.docx"]',
+      'a[download="MOCK_feedback_RDA.docx"]',
     )?.getAttribute('href')).toBe('blob:result-1');
     expect(compiled.querySelector<HTMLAnchorElement>(
-      'a[download="costs.xlsx"]',
+      'a[download="MOCK_feedback_costs.xlsx"]',
     )?.getAttribute('href')).toBe('blob:result-2');
     expect(compiled.querySelector<HTMLButtonElement>('.step-button[aria-current="step"]')
       ?.textContent)
@@ -227,14 +218,17 @@ describe('RdaReviewContainer', () => {
     compiled.querySelector<HTMLButtonElement>('.submit-button')?.click();
 
     const request = TestBed.inject(HttpTestingController).expectOne(
-      'http://localhost:8000/api/reviews/ingest',
+      'http://localhost:8000/api/v1/rda/evaluate?include_feedback=true',
     );
-    const multipart = createMultipartResponse(true, false);
-    request.flush(multipart.body, { headers: multipart.headers });
+    request.flush(createEvaluationResponse(true, false));
+    await Promise.resolve();
+    TestBed.inject(HttpTestingController)
+      .expectOne('http://localhost:8000/api/v1/rda/download-feedback/xlsx-id')
+      .flush(new Blob(['generated spreadsheet']));
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(compiled.querySelector('a[download="costs.xlsx"]')?.getAttribute('href'))
+    expect(compiled.querySelector('a[download="MOCK_feedback_costs.xlsx"]')?.getAttribute('href'))
       .toBe('blob:spreadsheet-result');
     expect(compiled.querySelector('.result-unavailable')?.textContent)
       .toContain('The RDA document is not available.');
@@ -262,14 +256,17 @@ describe('RdaReviewContainer', () => {
     compiled.querySelector<HTMLButtonElement>('.submit-button')?.click();
 
     const request = TestBed.inject(HttpTestingController).expectOne(
-      'http://localhost:8000/api/reviews/ingest',
+      'http://localhost:8000/api/v1/rda/evaluate?include_feedback=true',
     );
-    const multipart = createMultipartResponse(false, true);
-    request.flush(multipart.body, { headers: multipart.headers });
+    request.flush(createEvaluationResponse(false, true));
+    await Promise.resolve();
+    TestBed.inject(HttpTestingController)
+      .expectOne('http://localhost:8000/api/v1/rda/download-feedback/docx-id')
+      .flush(new Blob(['generated RDA']));
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(compiled.querySelector('a[download="Mock_RDA.docx"]')?.getAttribute('href'))
+    expect(compiled.querySelector('a[download="MOCK_feedback_RDA.docx"]')?.getAttribute('href'))
       .toBe('blob:rda-result');
     expect(compiled.querySelector('.result-unavailable')?.textContent)
       .toContain('The spreadsheet is not available.');
@@ -294,7 +291,7 @@ describe('RdaReviewContainer', () => {
     compiled.querySelector<HTMLButtonElement>('.submit-button')?.click();
 
     const request = TestBed.inject(HttpTestingController).expectOne(
-      'http://localhost:8000/api/reviews/ingest',
+      'http://localhost:8000/api/v1/rda/evaluate?include_feedback=true',
     );
     request.flush(
       { detail: 'Sensitive internal backend failure' },
@@ -327,7 +324,7 @@ describe('RdaReviewContainer', () => {
     expect(compiled.querySelector<HTMLButtonElement>('.submit-button')?.disabled).toBe(true);
     compiled.querySelector<HTMLButtonElement>('.submit-button')?.click();
     TestBed.inject(HttpTestingController).expectNone(
-      'http://localhost:8000/api/reviews/ingest',
+      'http://localhost:8000/api/v1/rda/evaluate?include_feedback=true',
     );
   });
 });

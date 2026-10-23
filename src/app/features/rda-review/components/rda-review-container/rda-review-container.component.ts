@@ -18,6 +18,16 @@ const EMPTY_UPLOADED_FILE: UploadedFile = {
   isValid: false,
 };
 
+const RDA_API_BASE_URL = 'http://localhost:8000';
+const RDA_EVALUATE_URL = `${RDA_API_BASE_URL}/api/v1/rda/evaluate`;
+
+interface RdaEvaluationResponse {
+  arquivo_docx_comentarios: string | null;
+  arquivo_xlsx_comentarios: string | null;
+  download_url_docx: string | null;
+  download_url_xlsx: string | null;
+}
+
 @Component({
   selector: 'app-rda-review-container',
   standalone: true,
@@ -150,52 +160,42 @@ export class RdaReviewContainerComponent implements OnDestroy {
 
     try {
       const formData = new FormData();
-      formData.append('file_1', minuta, form.minutaDocument.name);
-      formData.append('file_2', planilha, form.planilhaDocument.name);
+      formData.append('docx_file', minuta, form.minutaDocument.name);
+      if (planilha) {
+        formData.append('xlsx_file', planilha, form.planilhaDocument.name);
+      }
 
-      const response = await firstValueFrom(
-        this.http.post('http://localhost:8000/api/reviews/ingest', formData, {
-          observe: 'response',
-          responseType: 'blob',
-        }),
+      const result = await firstValueFrom(
+        this.http.post<RdaEvaluationResponse>(
+          `${RDA_EVALUATE_URL}?include_feedback=true`,
+          formData,
+        ),
       );
-      if (!response.body) {
-        throw new Error('The API response did not contain the result files.');
-      }
 
-      const contentType = response.headers.get('Content-Type');
-      if (!contentType?.toLocaleLowerCase().startsWith('multipart/form-data;')) {
-        throw new Error('The API response was not multipart/form-data.');
-      }
-
-      const multipartResponse = new Response(response.body, {
-        headers: { 'Content-Type': contentType },
-      });
-      const resultFiles = await multipartResponse.formData();
-      const rda = resultFiles.get('rda');
-      const spreadsheet = resultFiles.get('spreadsheet');
-      const hasRda = rda instanceof Blob && rda.size > 0;
-      const hasSpreadsheet = spreadsheet instanceof Blob && spreadsheet.size > 0;
-
-      if (hasRda && rda instanceof Blob) {
-        const fileName = rda instanceof File && rda.name ? rda.name : 'Mock_RDA.docx';
-        const rdaUrl = URL.createObjectURL(
-          new Blob([rda], {
-            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      if (result.download_url_docx) {
+        const docx = await firstValueFrom(
+          this.http.get(this.apiUrl(result.download_url_docx), {
+            responseType: 'blob',
           }),
         );
+        const rdaUrl = URL.createObjectURL(docx);
         this.generatedObjectUrls.push(rdaUrl);
         this.generatedRdaUrl.set(rdaUrl);
-        this.generatedRdaName.set(fileName);
+        this.generatedRdaName.set(result.arquivo_docx_comentarios ?? 'rda_feedback.docx');
       }
 
-      if (hasSpreadsheet && spreadsheet instanceof Blob) {
-        const spreadsheetUrl = URL.createObjectURL(
-          new Blob([spreadsheet], { type: spreadsheet.type || planilha.type }),
+      if (result.download_url_xlsx) {
+        const spreadsheet = await firstValueFrom(
+          this.http.get(this.apiUrl(result.download_url_xlsx), {
+            responseType: 'blob',
+          }),
         );
+        const spreadsheetUrl = URL.createObjectURL(spreadsheet);
         this.generatedObjectUrls.push(spreadsheetUrl);
         this.returnedSpreadsheetUrl.set(spreadsheetUrl);
-        this.returnedSpreadsheetName.set(form.planilhaDocument.name);
+        this.returnedSpreadsheetName.set(
+          result.arquivo_xlsx_comentarios ?? 'spreadsheet_feedback.xlsx',
+        );
       }
 
       this.activeStep.set('analysis');
@@ -226,5 +226,9 @@ export class RdaReviewContainerComponent implements OnDestroy {
     for (const url of this.generatedObjectUrls.splice(0)) {
       URL.revokeObjectURL(url);
     }
+  }
+
+  private apiUrl(path: string): string {
+    return new URL(path, RDA_API_BASE_URL).toString();
   }
 }
